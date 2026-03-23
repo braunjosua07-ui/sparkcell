@@ -10,6 +10,8 @@ const EVENT_ICONS = {
   'output': '\u2709',        // ✉
   'error': '\u2718',         // ✘
   'energy-low': '\u26A0',    // ⚠
+  'blocker-added': '\u26D4', // ⛔
+  'decision-added': '\u2696', // ⚖
 };
 
 const EVENT_COLORS = {
@@ -20,6 +22,8 @@ const EVENT_COLORS = {
   'output': 'magenta',
   'error': 'red',
   'energy-low': 'yellow',
+  'blocker-added': 'red',
+  'decision-added': 'green',
 };
 
 function formatTime(ts) {
@@ -44,6 +48,10 @@ function formatEvent(entry) {
       return `${name} Fehler: ${entry.error || 'unbekannt'}`;
     case 'energy-low':
       return `${name} Energie niedrig (${entry.energy}%)`;
+    case 'blocker-added':
+      return `BLOCKER von ${name}: ${entry.blocker || '?'}`;
+    case 'decision-added':
+      return `DECISION von ${name}: ${entry.decision || '?'}`;
     default:
       return `${name}: ${entry.type}`;
   }

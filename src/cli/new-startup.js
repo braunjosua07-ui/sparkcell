@@ -31,11 +31,25 @@ export async function runNewStartup() {
     if (!overwrite) return;
   } catch { /* doesn't exist, good */ }
 
-  // Step 2: Description
-  const description = await ask('Kurze Beschreibung (optional):') || `${name} — AI Startup Simulation`;
+  // Step 2: Description + Mission + Goals
+  step(2, 5, 'Startup definieren');
+  const description = await ask('Was macht dein Startup? (kurze Beschreibung):') || `${name} — AI Startup`;
+  const mission = await ask('Mission (das große Ziel):') || description;
+
+  dim('  Definiere Ziele für dein Startup. Leeren Eintrag = fertig.');
+  const goals = [];
+  for (let g = 1; g <= 10; g++) {
+    const goal = await ask(`Ziel ${g} (leer = fertig):`);
+    if (!goal) break;
+    goals.push(goal);
+  }
+  if (goals.length === 0) {
+    goals.push('MVP entwickeln', 'Erste Kunden gewinnen', 'Marktposition aufbauen');
+    dim('  Standard-Ziele gesetzt.');
+  }
 
   // Step 3: Template
-  step(2, 3, 'Team-Vorlage wählen');
+  step(3, 5, 'Team-Vorlage wählen');
   const templateItems = Object.entries(TEMPLATES).map(([id, t]) => ({
     label: t.label,
     hint: t.hint,
@@ -64,8 +78,8 @@ export async function runNewStartup() {
     agents = await buildCustomTeam();
   }
 
-  // Step 3: Create
-  step(3, 3, 'Startup erstellen');
+  // Step 4: Create
+  step(4, 5, 'Startup erstellen');
 
   // Create directories
   await fs.mkdir(path.join(startupDir, 'shared'), { recursive: true });
@@ -81,6 +95,8 @@ export async function runNewStartup() {
     version: 1,
     name,
     description,
+    mission,
+    goals,
     createdAt: new Date().toISOString(),
     agents,
     autonomyLevel: 'balanced',
@@ -91,8 +107,11 @@ export async function runNewStartup() {
   );
 
   console.log();
+  step(5, 5, 'Fertig');
   success(`Startup "${name}" erstellt!`);
   info(`  Ordner: ${startupDir}`);
+  info(`  Mission: ${mission}`);
+  info(`  Ziele: ${goals.length}`);
   info(`  Agents: ${agents.map(a => a.name).join(', ')}`);
   console.log();
   dim('Starte mit:');

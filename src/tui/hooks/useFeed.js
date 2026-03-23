@@ -19,6 +19,8 @@ export function useFeed(bus, maxEntries = 100) {
       bus.subscribe('agent:output', addEntry('output')),
       bus.subscribe('agent:error', addEntry('error')),
       bus.subscribe('agent:energy-low', addEntry('energy-low')),
+      bus.subscribe('whiteboard:blocker-added', addEntry('blocker-added')),
+      bus.subscribe('whiteboard:decision-added', addEntry('decision-added')),
     ];
     return () => unsubs.forEach(u => u());
   }, [bus]);

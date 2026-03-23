@@ -91,6 +91,23 @@ export class SparkCell extends EventEmitter {
       throw new Error(`Startup config not found: ${configPath}`);
     }
 
+    // Phase 2: Load whiteboard state if it exists, set mission + goals
+    const wbPath = path.join(paths.shared(this.#startupName), 'whiteboard.json');
+    try {
+      await this.#whiteboard.load(wbPath);
+      this.#logger.info('Whiteboard state loaded');
+    } catch {
+      // No saved state — initialize from startup config
+      if (startupConfig.mission) {
+        this.#whiteboard.setMission(startupConfig.mission);
+      } else if (startupConfig.description) {
+        this.#whiteboard.setMission(startupConfig.description);
+      }
+      for (const goal of (startupConfig.goals || [])) {
+        this.#whiteboard.addGoal(goal);
+      }
+    }
+
     // Create agents from config
     for (const agentConfig of (startupConfig.agents || [])) {
       if (agentConfig.active === false) continue;
@@ -102,6 +119,7 @@ export class SparkCell extends EventEmitter {
         llm: this.llm,
         outputDir: paths.output(this.#startupName),
         startupDescription: startupConfig.description || '',
+        whiteboard: this.#whiteboard,
         energyConfig: agentConfig.energy,
       });
       this.#agents.set(agentConfig.id, agent);
@@ -145,6 +163,11 @@ export class SparkCell extends EventEmitter {
     };
     process.on('SIGINT', shutdownHandler);
     process.on('SIGTERM', shutdownHandler);
+
+    // Phase 2: Forward whiteboard bus events to SparkCell emitter
+    this.#bus.subscribe('whiteboard:*', (data) => {
+      this.emit('whiteboard-event', data);
+    });
 
     this.#logger.info(`Started ${this.#startupName} with ${this.#agents.size} agents`);
     this.emit('started', { agents: this.#agents.size, tickRate });

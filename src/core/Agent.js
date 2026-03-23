@@ -12,10 +12,12 @@ export class Agent extends EventEmitter {
   #llm;
   #outputDir;
   #startupDescription;
+  #whiteboard;
   #taskQueue = [];
   #currentTask = null;
   #cycleCount = 0;
   #working = false; // prevent overlapping LLM calls
+  #peerOutputs = []; // last N outputs from other agents
 
   constructor(id, options = {}) {
     super();
@@ -26,6 +28,7 @@ export class Agent extends EventEmitter {
     this.#llm = options.llm || null;
     this.#outputDir = options.outputDir || null;
     this.#startupDescription = options.startupDescription || '';
+    this.#whiteboard = options.whiteboard || null;
 
     this.stateMachine = new StateMachine(id);
     this.energy = new EnergyManager(id, options.energyConfig);
@@ -37,6 +40,37 @@ export class Agent extends EventEmitter {
       this.emit('state-change', data);
       if (this.#bus) this.#bus.publish('agent:state-change', { ...data, agentId: id, agentName: this.name });
     });
+
+    // Phase 1: Listen to peer outputs and task completions
+    if (this.#bus) {
+      this.#bus.subscribe('agent:output', (data) => {
+        if (data.agentId === this.id) return; // skip own output
+        this.#peerOutputs.push({
+          agentId: data.agentId,
+          agentName: data.agentName,
+          task: data.task,
+          preview: data.preview,
+          timestamp: Date.now(),
+        });
+        // Keep only last 10 peer outputs
+        if (this.#peerOutputs.length > 10) this.#peerOutputs.shift();
+        // Store in memory for long-term recall
+        this.memory.store(
+          `peer-${data.agentId}-${Date.now()}`,
+          `${data.agentName} completed: ${data.task} — ${data.preview?.slice(0, 150) || ''}`,
+          { importance: 'medium', tags: [`peer-${data.agentId}`, 'peer-work'] },
+        );
+      });
+
+      this.#bus.subscribe('agent:task-completed', (data) => {
+        if (data.agentId === this.id) return;
+        this.memory.store(
+          `peer-done-${data.agentId}-${Date.now()}`,
+          `${data.agentName} finished task: ${data.task?.title || 'unknown'}`,
+          { importance: 'low', tags: [`peer-${data.agentId}`, 'peer-completed'] },
+        );
+      });
+    }
   }
 
   get state() { return this.stateMachine.currentState; }
@@ -58,8 +92,34 @@ export class Agent extends EventEmitter {
 
   async #handleIdle() {
     if (this.#taskQueue.length === 0) {
-      const newTasks = this.taskGenerator.generate({ role: this.role, skillGaps: [], agentState: this.state });
-      this.#taskQueue.push(...newTasks.slice(0, 3));
+      // Phase 2: Check whiteboard for open blockers this agent could help with
+      if (this.#whiteboard) {
+        const wb = this.#whiteboard.getState();
+        const openBlockers = wb.blockers.filter(b => !b.resolved && b.agentId !== this.id);
+        for (const blocker of openBlockers.slice(0, 1)) {
+          this.#taskQueue.push({
+            id: `help-${blocker.id}-${Date.now()}`,
+            title: `Help resolve: ${blocker.blocker}`,
+            description: `A teammate (${blocker.agentId}) is blocked: "${blocker.blocker}". Use your skills as ${this.role} to help resolve this.`,
+            priority: 'high',
+            source: 'blocker-help',
+          });
+        }
+      }
+
+      // Generate context-aware tasks with whiteboard goals + peer context
+      if (this.#taskQueue.length === 0) {
+        const missionGoals = this.#whiteboard
+          ? this.#whiteboard.getState().goals.map(g => g.goal)
+          : [];
+        const newTasks = this.taskGenerator.generate({
+          role: this.role,
+          skillGaps: [],
+          agentState: this.state,
+          missionGoals,
+        });
+        this.#taskQueue.push(...newTasks.slice(0, 3));
+      }
     }
     if (this.#taskQueue.length > 0) {
       this.#currentTask = this.#taskQueue.shift();
@@ -139,6 +199,9 @@ export class Agent extends EventEmitter {
       { importance: 'high', tags: [task.source || 'work', this.role] },
     );
 
+    // Phase 2: Parse blockers and decisions from LLM output
+    this.#parseStructuredOutput(content);
+
     // Save output to file
     if (this.#outputDir) {
       await this.#saveOutput(task, content);
@@ -168,12 +231,45 @@ export class Agent extends EventEmitter {
     // Check memory for previous work
     const recentWork = this.memory.search('work').slice(-3);
     const memoryContext = recentWork.length > 0
-      ? `\n\nBisherige Arbeit:\n${recentWork.map(m => `- ${m.value.slice(0, 100)}`).join('\n')}`
+      ? `\n\nDeine bisherige Arbeit:\n${recentWork.map(m => `- ${m.content.slice(0, 100)}`).join('\n')}`
       : '';
 
+    // Phase 1: Peer context — what teammates have been doing
+    const recentPeers = this.#peerOutputs.slice(-3);
+    const peerContext = recentPeers.length > 0
+      ? `\n\nWas deine Teamkollegen gerade gemacht haben:\n${recentPeers.map(p => `- ${p.agentName}: ${p.task} — ${p.preview?.slice(0, 100) || ''}`).join('\n')}`
+      : '';
+
+    // Phase 2: Whiteboard context — mission, goals, blockers
+    let whiteboardContext = '';
+    if (this.#whiteboard) {
+      const wb = this.#whiteboard.getState();
+      const parts = [];
+      if (wb.mission) parts.push(`Mission: ${wb.mission}`);
+      if (wb.goals.length > 0) parts.push(`Ziele:\n${wb.goals.map(g => `  - ${g.goal}`).join('\n')}`);
+      const openBlockers = wb.blockers.filter(b => !b.resolved);
+      if (openBlockers.length > 0) parts.push(`Offene Blocker:\n${openBlockers.map(b => `  - [${b.agentId}] ${b.blocker}`).join('\n')}`);
+      if (wb.decisions.length > 0) {
+        const recentDecisions = wb.decisions.slice(-3);
+        parts.push(`Letzte Entscheidungen:\n${recentDecisions.map(d => `  - ${d.decision}`).join('\n')}`);
+      }
+      if (parts.length > 0) whiteboardContext = `\n\nTeam-Whiteboard:\n${parts.join('\n')}`;
+    }
+
+    const systemPrompt = [
+      context,
+      'Du erledigst Aufgaben gründlich und lieferst konkreten Output. Antworte auf Deutsch.',
+      'Koordiniere dich mit deinem Team. Beziehe dich auf die Arbeit deiner Kollegen.',
+      'Wenn du auf ein Problem stößt das du nicht alleine lösen kannst, melde es mit: [BLOCKER: Beschreibung]',
+      'Wenn du eine wichtige Entscheidung triffst, markiere sie mit: [DECISION: Beschreibung]',
+      memoryContext,
+      peerContext,
+      whiteboardContext,
+    ].filter(Boolean).join('\n');
+
     return [
-      { role: 'system', content: `${context}\nDu erledigst Aufgaben gründlich und lieferst konkreten Output. Antworte auf Deutsch.${memoryContext}` },
-      { role: 'user', content: `Aufgabe: ${task.title}\n\n${task.description}\n\nLiefere ein konkretes Ergebnis für diese Aufgabe.` },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Aufgabe: ${task.title}\n\n${task.description}\n\nLiefere ein konkretes Ergebnis für diese Aufgabe. Berücksichtige was deine Teamkollegen bereits erarbeitet haben.` },
     ];
   }
 
@@ -189,12 +285,42 @@ export class Agent extends EventEmitter {
   async #completeTask() {
     const task = this.#currentTask;
     this.#learnFromOutcome(task, true);
+    this.taskGenerator.markCompleted(task.title);
     this.stateMachine.transition('taskComplete');
     this.emit('task-completed', { agentId: this.id, task });
     if (this.#bus) this.#bus.publish('agent:task-completed', {
       agentId: this.id, agentName: this.name, task,
     });
     this.#currentTask = null;
+  }
+
+  /**
+   * Parse [BLOCKER: ...] and [DECISION: ...] markers from LLM output.
+   */
+  #parseStructuredOutput(content) {
+    // Parse blockers
+    const blockerRegex = /\[BLOCKER:\s*(.+?)\]/gi;
+    let blockerMatch;
+    while ((blockerMatch = blockerRegex.exec(content)) !== null) {
+      if (this.#whiteboard) {
+        const blockerId = this.#whiteboard.addBlocker(this.id, blockerMatch[1].trim());
+        if (this.#bus) this.#bus.publish('whiteboard:blocker-added', {
+          blockerId, agentId: this.id, agentName: this.name, blocker: blockerMatch[1].trim(),
+        });
+      }
+    }
+
+    // Parse decisions
+    const decisionRegex = /\[DECISION:\s*(.+?)\]/gi;
+    let decisionMatch;
+    while ((decisionMatch = decisionRegex.exec(content)) !== null) {
+      if (this.#whiteboard) {
+        const decisionId = this.#whiteboard.addDecision(decisionMatch[1].trim());
+        if (this.#bus) this.#bus.publish('whiteboard:decision-added', {
+          decisionId, agentId: this.id, agentName: this.name, decision: decisionMatch[1].trim(),
+        });
+      }
+    }
   }
 
   async #handleBlocked() {
