@@ -11,6 +11,7 @@ import { PauseRoom } from './communication/PauseRoom.js';
 import { FileLock } from './utils/FileLock.js';
 import { Logger } from './utils/Logger.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
+import { LLMManager } from './llm/LLMManager.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -39,6 +40,13 @@ export class SparkCell extends EventEmitter {
     this.#fileLock = new FileLock();
     this.#logger = new Logger(paths.startupLogs(startupName));
     this.#errorHandler = new ErrorHandler(this.#logger);
+
+    // Create LLM from global config
+    if (config.llm) {
+      this.llm = new LLMManager(config.llm);
+    } else {
+      this.llm = null;
+    }
   }
 
   get startupName() { return this.#startupName; }
@@ -91,6 +99,9 @@ export class SparkCell extends EventEmitter {
         role: agentConfig.role,
         skills: agentConfig.skills || [],
         bus: this.#bus,
+        llm: this.llm,
+        outputDir: paths.output(this.#startupName),
+        startupDescription: startupConfig.description || '',
         energyConfig: agentConfig.energy,
       });
       this.#agents.set(agentConfig.id, agent);

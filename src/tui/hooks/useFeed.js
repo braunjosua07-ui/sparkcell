@@ -15,6 +15,10 @@ export function useFeed(bus, maxEntries = 100) {
       bus.subscribe('agent:state-change', addEntry('state-change')),
       bus.subscribe('agent:task-started', addEntry('task-started')),
       bus.subscribe('agent:task-completed', addEntry('task-completed')),
+      bus.subscribe('agent:thinking', addEntry('thinking')),
+      bus.subscribe('agent:output', addEntry('output')),
+      bus.subscribe('agent:error', addEntry('error')),
+      bus.subscribe('agent:energy-low', addEntry('energy-low')),
     ];
     return () => unsubs.forEach(u => u());
   }, [bus]);

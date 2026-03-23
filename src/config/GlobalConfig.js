@@ -22,6 +22,8 @@ export class GlobalConfig {
   async save() {
     await fs.mkdir(path.dirname(this.#configPath), { recursive: true });
     await fs.writeFile(this.#configPath, JSON.stringify(this.data, null, 2));
+    // Restrict permissions — config may contain API keys
+    await fs.chmod(this.#configPath, 0o600).catch(() => {});
   }
 
   needsSetup() {
