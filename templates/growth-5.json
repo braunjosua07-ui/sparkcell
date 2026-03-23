@@ -1,0 +1,11 @@
+{
+  "name": "Growth Team",
+  "description": "Balanced team for product-market fit and growth",
+  "agents": [
+    { "id": "ceo", "name": "CEO", "role": "strategic-lead", "skills": ["strategy", "vision", "leadership"] },
+    { "id": "cto", "name": "CTO", "role": "implementer", "skills": ["coding", "architecture", "devops"] },
+    { "id": "cmo", "name": "CMO", "role": "marketer", "skills": ["marketing", "content", "social-media"] },
+    { "id": "product", "name": "Product Manager", "role": "analyst", "skills": ["research", "analysis", "user-stories"] },
+    { "id": "designer", "name": "Designer", "role": "creative", "skills": ["design", "ux", "branding"] }
+  ]
+}

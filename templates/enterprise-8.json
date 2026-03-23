@@ -1,0 +1,14 @@
+{
+  "name": "Enterprise Team",
+  "description": "Full team for scaling and enterprise readiness",
+  "agents": [
+    { "id": "ceo", "name": "CEO", "role": "strategic-lead", "skills": ["strategy", "vision", "leadership"] },
+    { "id": "cto", "name": "CTO", "role": "implementer", "skills": ["coding", "architecture", "devops"] },
+    { "id": "cfo", "name": "CFO", "role": "financial", "skills": ["finance", "budgeting", "forecasting"] },
+    { "id": "cmo", "name": "CMO", "role": "marketer", "skills": ["marketing", "content", "seo"] },
+    { "id": "product", "name": "Product Manager", "role": "analyst", "skills": ["research", "analysis", "user-stories"] },
+    { "id": "designer", "name": "Designer", "role": "creative", "skills": ["design", "ux", "prototyping"] },
+    { "id": "dev", "name": "Developer", "role": "implementer", "skills": ["coding", "testing", "debugging"] },
+    { "id": "sales", "name": "Sales Lead", "role": "sales", "skills": ["sales", "negotiation", "pitching"] }
+  ]
+}
