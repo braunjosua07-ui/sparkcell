@@ -33,10 +33,15 @@ export class Logger extends EventEmitter {
 
   async flush() {
     if (this.#buffer.length === 0) return;
-    const lines = this.#buffer.map(e => JSON.stringify(e)).join('\n') + '\n';
+    const entries = this.#buffer;
     this.#buffer = [];
-    const file = path.join(this.#logDir, `sparkcell-${new Date().toISOString().slice(0, 10)}.log`);
-    await fs.appendFile(file, lines);
+    const lines = entries.map(e => JSON.stringify(e)).join('\n') + '\n';
+    try {
+      const file = path.join(this.#logDir, `sparkcell-${new Date().toISOString().slice(0, 10)}.log`);
+      await fs.appendFile(file, lines);
+    } catch {
+      this.#buffer = [...entries, ...this.#buffer];
+    }
   }
 
   async shutdown() {
