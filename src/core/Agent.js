@@ -129,7 +129,8 @@ export class Agent extends EventEmitter {
       signal: AbortSignal.timeout(30000),
     });
 
-    const content = result.content;
+    const content = result?.content || '';
+    if (!content) return; // LLM returned empty — skip, retry next cycle
 
     // Store in memory
     this.memory.store(
