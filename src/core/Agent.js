@@ -107,14 +107,15 @@ export class Agent extends EventEmitter {
         }
       }
 
-      // Generate context-aware tasks with whiteboard goals + peer context
+      // Generate context-aware tasks with whiteboard goals + skill gaps
       if (this.#taskQueue.length === 0) {
         const missionGoals = this.#whiteboard
           ? this.#whiteboard.getState().goals.map(g => g.goal)
           : [];
+        const skillGaps = this.skills.findGaps(missionGoals);
         const newTasks = this.taskGenerator.generate({
           role: this.role,
-          skillGaps: [],
+          skillGaps,
           agentState: this.state,
           missionGoals,
         });
@@ -216,9 +217,8 @@ export class Agent extends EventEmitter {
       tokens: result.usage?.total_tokens || 0,
     });
 
-    // Practice skill
-    const skillUsed = this.skills.getSkills().keys().next().value || null;
-    if (skillUsed) this.skills.practice(skillUsed, 0.1);
+    // Practice the skill most relevant to this task
+    this.skills.learnFromTask(task, 0.2);
 
     await this.#completeTask();
   }
@@ -256,12 +256,19 @@ export class Agent extends EventEmitter {
       if (parts.length > 0) whiteboardContext = `\n\nTeam-Whiteboard:\n${parts.join('\n')}`;
     }
 
+    // Skill context — agent knows what it's good/bad at
+    const skillSummary = this.skills.getSkillSummary();
+    const skillContext = skillSummary
+      ? `\n\nDeine Skills: ${skillSummary}`
+      : '';
+
     const systemPrompt = [
       context,
       'Du erledigst Aufgaben gründlich und lieferst konkreten Output. Antworte auf Deutsch.',
       'Koordiniere dich mit deinem Team. Beziehe dich auf die Arbeit deiner Kollegen.',
       'Wenn du auf ein Problem stößt das du nicht alleine lösen kannst, melde es mit: [BLOCKER: Beschreibung]',
       'Wenn du eine wichtige Entscheidung triffst, markiere sie mit: [DECISION: Beschreibung]',
+      skillContext,
       memoryContext,
       peerContext,
       whiteboardContext,
