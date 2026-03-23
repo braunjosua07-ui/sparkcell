@@ -1,8 +1,17 @@
 // src/core/SkillManager.js
 
-const INITIAL_LEVEL = 10;
 const XP_PER_HOUR = 100;
 const MAX_LEVEL = 100;
+
+// Skill tier presets — used when creating agents
+export const SKILL_TIERS = {
+  beginner:     { level: 30, xp: 400 },
+  intermediate: { level: 50, xp: 1200 },
+  expert:       { level: 70, xp: 4000 },
+  master:       { level: 85, xp: 12000 },
+};
+
+const DEFAULT_TIER = 'intermediate';
 
 /**
  * Keyword → skill mapping for task matching.
@@ -24,21 +33,33 @@ const SKILL_KEYWORDS = {
   prototyping:   ['prototype', 'clickable', 'interactive', 'demo', 'proof of concept'],
 };
 
-function xpToLevel(xp, initialLevel = INITIAL_LEVEL) {
-  if (xp <= 0) return initialLevel;
+function xpToLevel(xp) {
+  if (xp <= 0) return 10;
   const k = 20;
   const scale = 200;
-  return Math.min(MAX_LEVEL, initialLevel + k * Math.log(1 + xp / scale));
+  return Math.min(MAX_LEVEL, 10 + k * Math.log(1 + xp / scale));
 }
 
 export class SkillManager {
   #agentId;
   #skills = new Map();
 
+  /**
+   * @param {string} agentId
+   * @param {Array<string|{name: string, tier?: string}>} initialSkills
+   */
   constructor(agentId, initialSkills = []) {
     this.#agentId = agentId;
-    for (const name of initialSkills) {
-      this.#skills.set(name, { level: INITIAL_LEVEL, practiceTime: 0, xp: 0 });
+    for (const skill of initialSkills) {
+      if (typeof skill === 'string') {
+        // Simple string — use default tier
+        const tier = SKILL_TIERS[DEFAULT_TIER];
+        this.#skills.set(skill, { level: tier.level, practiceTime: 0, xp: tier.xp });
+      } else if (skill && skill.name) {
+        // Object with tier: { name: 'coding', tier: 'expert' }
+        const tier = SKILL_TIERS[skill.tier || DEFAULT_TIER] || SKILL_TIERS[DEFAULT_TIER];
+        this.#skills.set(skill.name, { level: tier.level, practiceTime: 0, xp: tier.xp });
+      }
     }
   }
 
@@ -49,12 +70,14 @@ export class SkillManager {
     if (hours <= 0) return;
     let entry = this.#skills.get(skillName);
     if (!entry) {
-      entry = { level: INITIAL_LEVEL, practiceTime: 0, xp: 0 };
+      // Auto-discovered skill starts at beginner tier
+      const tier = SKILL_TIERS.beginner;
+      entry = { level: tier.level, practiceTime: 0, xp: tier.xp };
       this.#skills.set(skillName, entry);
     }
     entry.practiceTime += hours;
     entry.xp += hours * XP_PER_HOUR;
-    entry.level = xpToLevel(entry.xp, INITIAL_LEVEL);
+    entry.level = xpToLevel(entry.xp);
   }
 
   /**
@@ -133,12 +156,15 @@ export class SkillManager {
   getSkillSummary() {
     if (this.#skills.size === 0) return '';
     const entries = [...this.#skills.entries()]
-      .sort((a, b) => b[1].level - a[1].level)
-      .map(([name, s]) => {
-        const bar = s.level >= 50 ? 'stark' : s.level >= 25 ? 'mittel' : 'Anfänger';
-        return `${name}: ${Math.round(s.level)}/100 (${bar})`;
-      });
-    return entries.join(', ');
+      .sort((a, b) => b[1].level - a[1].level);
+
+    const strong = entries.filter(([, s]) => s.level >= 50).map(([n]) => n);
+    const developing = entries.filter(([, s]) => s.level >= 30 && s.level < 50).map(([n]) => n);
+
+    const parts = [];
+    if (strong.length > 0) parts.push(`Stärken: ${strong.join(', ')}`);
+    if (developing.length > 0) parts.push(`Entwickelt sich in: ${developing.join(', ')}`);
+    return parts.join('. ');
   }
 
   getLevel(skillName) {

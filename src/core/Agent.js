@@ -70,6 +70,16 @@ export class Agent extends EventEmitter {
           { importance: 'low', tags: [`peer-${data.agentId}`, 'peer-completed'] },
         );
       });
+
+      // Listen for user messages
+      this.#bus.subscribe('user:message', (data) => {
+        if (data.target !== 'all' && data.target !== this.id) return;
+        this.memory.store(
+          `user-msg-${Date.now()}`,
+          `User-Anweisung: ${data.message}`,
+          { importance: 'high', tags: ['user', 'directive'] },
+        );
+      });
     }
   }
 

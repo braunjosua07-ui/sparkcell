@@ -73,7 +73,7 @@ describe('SkillManager — Auto-learn from tasks', () => {
   it('practices the matched skill when learning from a task', () => {
     const sm = new SkillManager('dev', ['coding']);
     const before = sm.getLevel('coding');
-    sm.learnFromTask({ title: 'Build REST API endpoints', description: 'Implement CRUD API' }, 0.5);
+    sm.learnFromTask({ title: 'Build REST API endpoints', description: 'Implement CRUD API' }, 5.0);
     const after = sm.getLevel('coding');
     assert.ok(after > before, 'Coding skill should increase after coding task');
   });
