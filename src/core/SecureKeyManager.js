@@ -12,6 +12,9 @@ export class SecureKeyManager {
   }
 
   encrypt(apiKey) {
+    if (typeof apiKey !== 'string' || apiKey.length === 0) {
+      throw new TypeError('apiKey must be a non-empty string');
+    }
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', this.#key, iv);
     let encrypted = cipher.update(apiKey, 'utf8', 'hex');
@@ -22,6 +25,9 @@ export class SecureKeyManager {
   decrypt(encryptedKey) {
     if (!this.isEncrypted(encryptedKey)) return encryptedKey;
     const parts = encryptedKey.split(':');
+    if (parts.length < 3 || parts[1].length !== 32 || !parts[2]) {
+      throw new Error('Malformed encrypted payload');
+    }
     const iv = Buffer.from(parts[1], 'hex');
     const encrypted = parts[2];
     const decipher = crypto.createDecipheriv('aes-256-cbc', this.#key, iv);
