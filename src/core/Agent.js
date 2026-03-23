@@ -165,7 +165,7 @@ export class Agent extends EventEmitter {
       : `Du bist ${this.name}, ein ${this.role} in einem Startup-Team.`;
 
     // Check memory for previous work
-    const recentWork = this.memory.search({ tags: ['work'] }).slice(-3);
+    const recentWork = this.memory.search('work').slice(-3);
     const memoryContext = recentWork.length > 0
       ? `\n\nBisherige Arbeit:\n${recentWork.map(m => `- ${m.value.slice(0, 100)}`).join('\n')}`
       : '';
