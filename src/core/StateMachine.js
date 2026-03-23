@@ -23,6 +23,7 @@ const TRANSITIONS = {
 export class StateMachine extends EventEmitter {
   #maxHistory;
   #callbacks;
+  #stateTimers = new Map();
 
   constructor(agentId, options = {}) {
     super();
@@ -31,8 +32,7 @@ export class StateMachine extends EventEmitter {
     this.history = [];
     this.#maxHistory = options.maxHistory || 100;
     this.#callbacks = new Map();
-    this.stateTimers = new Map();
-    this.stateTimers.set(STATES.IDLE, Date.now());
+    this.#stateTimers.set(STATES.IDLE, Date.now());
   }
 
   transition(event) {
@@ -46,7 +46,7 @@ export class StateMachine extends EventEmitter {
     if (this.history.length > this.#maxHistory) this.history.shift();
 
     this.currentState = to;
-    this.stateTimers.set(to, Date.now());
+    this.#stateTimers.set(to, Date.now());
 
     // Fire callbacks
     const key = `${from}->${to}`;
@@ -62,7 +62,7 @@ export class StateMachine extends EventEmitter {
   }
 
   getTimeInState() {
-    const entered = this.stateTimers.get(this.currentState) || Date.now();
+    const entered = this.#stateTimers.get(this.currentState) || Date.now();
     return Date.now() - entered;
   }
 

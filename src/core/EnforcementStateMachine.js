@@ -37,10 +37,25 @@ export class EnforcementStateMachine extends StateMachine {
         event: 'violations-found',
         agentId: this.agentId,
       });
+      // Restore to previous state after enforcement
+      this.currentState = previousState;
+      this.emit('state-change', {
+        from: ENFORCEMENT_STATES.ENFORCING,
+        to: previousState,
+        event: 'enforcement-complete',
+        agentId: this.agentId,
+      });
       return { valid: false, violations };
     }
 
+    // Restore to previous state after clean validation
     this.currentState = previousState;
+    this.emit('state-change', {
+      from: ENFORCEMENT_STATES.VALIDATING,
+      to: previousState,
+      event: 'validation-passed',
+      agentId: this.agentId,
+    });
     return { valid: true, violations: [] };
   }
 }
