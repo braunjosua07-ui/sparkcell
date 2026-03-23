@@ -22,11 +22,17 @@ program
     const config = new GlobalConfig(paths.config());
     await config.load();
     if (config.needsSetup()) {
-      console.log('First-time setup required. Run: sparkcell config');
-      return;
+      const { runSetup } = await import('../src/cli/setup.js');
+      const ok = await runSetup();
+      if (!ok) return;
+      await config.load();
     }
     const startupName = name || await selectStartup();
-    if (!startupName) { console.log('No startup selected.'); return; }
+    if (!startupName) {
+      const { info } = await import('../src/cli/prompt.js');
+      info('Kein Startup gefunden. Erstelle eins mit: sparkcell new');
+      return;
+    }
     const sc = new SparkCell(startupName, config.data);
     await sc.initialize();
     render(React.createElement(App, { sparkCell: sc }));
@@ -37,7 +43,15 @@ program
   .command('new')
   .description('Create a new startup')
   .action(async () => {
-    console.log('Use: sparkcell new <name> — Interactive wizard coming soon.');
+    const config = new GlobalConfig(paths.config());
+    await config.load();
+    if (config.needsSetup()) {
+      const { runSetup } = await import('../src/cli/setup.js');
+      const ok = await runSetup();
+      if (!ok) return;
+    }
+    const { runNewStartup } = await import('../src/cli/new-startup.js');
+    await runNewStartup();
   });
 
 program
@@ -46,56 +60,113 @@ program
   .action(async () => {
     const selector = new StartupSelector();
     const startups = await selector.listStartups();
+    const { success, dim, info } = await import('../src/cli/prompt.js');
     if (startups.length === 0) {
-      console.log('No startups found. Create one with: sparkcell new');
+      dim('Keine Startups gefunden.');
+      info('Erstelle eins mit: sparkcell new');
       return;
     }
-    console.log('Available startups:');
+    console.log();
+    success(`${startups.length} Startup(s):`);
     for (const s of startups) {
-      console.log(`  ${s.name} — ${s.displayName} (${s.agentCount} agents)`);
+      info(`  ${s.name} — ${s.displayName} (${s.agentCount} Agents)`);
     }
+    console.log();
   });
 
 program
-  .command('config')
-  .description('Edit global settings')
-  .action(async () => {
-    const configPath = paths.config();
-    console.log(`Config file: ${configPath}`);
-    const config = new GlobalConfig(configPath);
+  .command('config [action] [key] [value]')
+  .description('Show or edit settings (config set <key> <value>)')
+  .action(async (action, key, value) => {
+    const { success, info, warn, error: err } = await import('../src/cli/prompt.js');
+    const config = new GlobalConfig(paths.config());
     await config.load();
-    console.log(JSON.stringify(config.data, null, 2));
+
+    if (!action || action === 'show') {
+      console.log(JSON.stringify(config.data, null, 2));
+      console.log();
+      info(`Datei: ${paths.config()}`);
+      return;
+    }
+
+    if (action === 'set') {
+      if (!key) { err('Benutzung: sparkcell config set <key> <value>'); return; }
+      const keyMap = {
+        provider: 'llm.primary.provider',
+        model: 'llm.primary.model',
+        baseurl: 'llm.primary.baseUrl',
+        apikey: 'llm.primary.apiKey',
+        'daily-limit': 'budget.dailyLimit',
+        tickrate: 'tickRate',
+      };
+      const resolvedKey = keyMap[key.toLowerCase()] || key;
+      setNestedValue(config.data, resolvedKey, value);
+      await config.save();
+      success(`${resolvedKey} = ${value}`);
+      return;
+    }
+
+    if (action === 'path') {
+      info(paths.config());
+      return;
+    }
+
+    warn(`Unbekannte Aktion: ${action}. Nutze: show, set, path`);
+  });
+
+program
+  .command('setup')
+  .description('Run first-time setup wizard')
+  .action(async () => {
+    const { runSetup } = await import('../src/cli/setup.js');
+    await runSetup();
+  });
+
+program
+  .command('doctor')
+  .description('Check system health')
+  .action(async () => {
+    const { runDoctor } = await import('../src/cli/doctor.js');
+    await runDoctor();
   });
 
 program
   .command('export [name]')
   .description('Export startup documents')
   .action(async (name) => {
-    if (!name) { console.log('Usage: sparkcell export <startup-name>'); return; }
+    const { info, warn } = await import('../src/cli/prompt.js');
+    if (!name) { info('Benutzung: sparkcell export <startup-name>'); return; }
     const outputDir = paths.output(name);
     try {
-      const files = await fs.readdir(path.join(outputDir, 'docs'));
-      console.log(`Exported ${files.length} documents from ${name}`);
-      for (const f of files) console.log(`  ${f}`);
+      const docsDir = path.join(outputDir, 'docs');
+      const files = await fs.readdir(docsDir);
+      info(`${files.length} Dokumente von "${name}":`);
+      for (const f of files) info(`  ${f}`);
     } catch {
-      console.log(`No output found for startup: ${name}`);
+      warn(`Kein Output gefunden für: ${name}`);
     }
   });
 
-// Default: show startup selector or help
+// Default: setup or help
 program.action(async () => {
   const config = new GlobalConfig(paths.config());
   await config.load();
   if (config.needsSetup()) {
-    console.log('Welcome to SparkCell! Run "sparkcell config" to set up your LLM provider.');
+    const { runSetup } = await import('../src/cli/setup.js');
+    await runSetup();
   } else {
-    const selector = new StartupSelector();
-    const has = await selector.hasStartups();
-    if (has) {
-      console.log('Run "sparkcell start" to begin or "sparkcell list" to see your startups.');
-    } else {
-      console.log('No startups yet. Run "sparkcell new" to create one.');
-    }
+    const { info, dim } = await import('../src/cli/prompt.js');
+    console.log();
+    info('SparkCell v2.0');
+    console.log();
+    dim('Befehle:');
+    info('  sparkcell start [name]   Startup starten');
+    info('  sparkcell new            Neues Startup erstellen');
+    info('  sparkcell list           Startups auflisten');
+    info('  sparkcell config         Einstellungen zeigen');
+    info('  sparkcell doctor         System-Check');
+    info('  sparkcell setup          Setup-Wizard');
+    console.log();
   }
 });
 
@@ -104,9 +175,31 @@ async function selectStartup() {
   const startups = await selector.listStartups();
   if (startups.length === 0) return null;
   if (startups.length === 1) return startups[0].name;
-  console.log('Available startups:');
-  startups.forEach((s, i) => console.log(`  ${i + 1}. ${s.displayName}`));
-  return startups[0].name; // Default to first
+
+  const { select } = await import('../src/cli/prompt.js');
+  const items = startups.map(s => ({
+    label: s.displayName,
+    hint: `${s.agentCount} Agents`,
+    name: s.name,
+  }));
+  const chosen = await select('Welches Startup starten?', items);
+  return chosen.name;
+}
+
+function setNestedValue(obj, path, value) {
+  const parts = path.split('.');
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!current[parts[i]] || typeof current[parts[i]] !== 'object') {
+      current[parts[i]] = {};
+    }
+    current = current[parts[i]];
+  }
+  // Try to parse numbers/booleans
+  if (value === 'true') value = true;
+  else if (value === 'false') value = false;
+  else if (!isNaN(value) && value !== '') value = Number(value);
+  current[parts[parts.length - 1]] = value;
 }
 
 program.parse();
