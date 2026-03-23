@@ -38,7 +38,11 @@ export class OpenAICompatibleProvider {
     }
     const data = await response.json();
     if (data.usage) this.#stats.totalTokens += (data.usage.total_tokens || 0);
-    return { content: data.choices?.[0]?.message?.content || '', usage: data.usage || {}, model: data.model };
+    const message = data.choices?.[0]?.message || {};
+    // Some models (thinking/reasoning models like glm, qwen3) put output in
+    // "reasoning" instead of "content". Fall back to reasoning if content is empty.
+    const content = message.content || message.reasoning || '';
+    return { content, usage: data.usage || {}, model: data.model };
   }
 
   async listModels() {

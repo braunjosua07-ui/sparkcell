@@ -186,8 +186,8 @@ export class Agent extends EventEmitter {
 
     const result = await this.#llm.query(prompt, {
       temperature: 0.8,
-      maxTokens: 1024,
-      signal: AbortSignal.timeout(30000),
+      maxTokens: 4096,
+      signal: AbortSignal.timeout(60000),
     });
 
     const content = result?.content || '';
