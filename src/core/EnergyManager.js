@@ -23,11 +23,13 @@ export class EnergyManager {
   get energy() { return this.#energy; }
 
   decay(amount = this.#config.decayRate) {
+    amount = Math.max(0, amount);
     this.#energy = Math.max(0, this.#energy - amount);
     this.#stats.decayCount++;
   }
 
   recover(amount = this.#config.recoveryRate) {
+    amount = Math.max(0, amount);
     this.#energy = Math.min(100, this.#energy + amount);
     this.#stats.recoveryCount++;
   }
@@ -50,7 +52,7 @@ export class EnergyManager {
     if (!this.#dataDir) return;
     try {
       const data = JSON.parse(await fs.readFile(path.join(this.#dataDir, 'energy.json'), 'utf8'));
-      this.#energy = data.energy ?? 100;
+      this.#energy = Math.min(100, Math.max(0, data.energy ?? 100));
       if (data.stats) Object.assign(this.#stats, data.stats);
     } catch { /* first run, use defaults */ }
   }
