@@ -15,6 +15,7 @@ import { LLMManager } from './llm/LLMManager.js';
 import { ToolRunner } from './tools/ToolRunner.js';
 import { ToolPermissions } from './tools/ToolPermissions.js';
 import { createSandboxedTool } from './tools/meta/CreateToolTool.js';
+import { BrowserManager } from './tools/BrowserManager.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -27,6 +28,7 @@ export class SparkCell extends EventEmitter {
   #errorHandler;
   #fileLock;
   #toolRunner;
+  #browserManager;
   #intervals = [];
   #running = false;
   #paused = false;
@@ -59,6 +61,9 @@ export class SparkCell extends EventEmitter {
       logger: this.#logger,
       bus: this.#bus,
     });
+
+    // Create BrowserManager (Playwright loaded lazily)
+    this.#browserManager = new BrowserManager({ logger: this.#logger });
   }
 
   get toolRunner() { return this.#toolRunner; }
@@ -157,6 +162,7 @@ export class SparkCell extends EventEmitter {
         whiteboard: this.#whiteboard,
         energyConfig: agentConfig.energy,
         toolRunner: this.#toolRunner,
+        browserManager: this.#browserManager,
         workDir,
         customToolsDir: path.join(workDir, 'custom-tools'),
       });
@@ -267,7 +273,14 @@ export class SparkCell extends EventEmitter {
       'whiteboard:save'
     );
 
-    // 5. Remove session lock
+    // 5. Close browser sessions
+    await this.#errorHandler.safeAsync(
+      () => this.#browserManager.shutdown(),
+      null,
+      'browser:shutdown'
+    );
+
+    // 7. Remove session lock
     const lockFile = path.join(paths.startup(this.#startupName), 'session.lock');
     await this.#errorHandler.safeAsync(
       () => fs.unlink(lockFile),
@@ -275,10 +288,10 @@ export class SparkCell extends EventEmitter {
       'session:unlock'
     );
 
-    // 6. Release file locks
+    // 8. Release file locks
     await this.#fileLock.releaseAll();
 
-    // 7. Flush logger
+    // 9. Flush logger
     await this.#logger.shutdown();
 
     this.emit('shutdown');
