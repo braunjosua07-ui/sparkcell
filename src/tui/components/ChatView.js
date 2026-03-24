@@ -311,6 +311,57 @@ function handleCommand(text, sparkCell, addMessage) {
       addMessage({ type: 'success', text: `Tool "${toolName}" gesperrt.` });
       break;
     }
+    case 'account': {
+      const action = parts[1]?.toLowerCase();
+      const platform = parts[2]?.toLowerCase();
+      const cs = sparkCell.credentialStore;
+      if (!cs) {
+        addMessage({ type: 'error', text: 'CredentialStore nicht verfuegbar.' });
+        break;
+      }
+      if (action === 'add') {
+        if (!platform) {
+          addMessage({ type: 'error', text: 'Benutzung: /account add <platform>' });
+          break;
+        }
+        // Publish event to trigger masked input mode
+        sparkCell.bus.publish('credential:input-requested', { platform });
+        addMessage({ type: 'system', text: `Credentials fuer "${platform}" eingeben:` });
+        addMessage({ type: 'system', text: '  Format: username:password' });
+        addMessage({ type: 'system', text: '  (Eingabe wird nicht im Chat angezeigt)' });
+        break;
+      }
+      if (action === 'revoke') {
+        if (!platform) {
+          addMessage({ type: 'error', text: 'Benutzung: /account revoke <platform>' });
+          break;
+        }
+        cs.revoke(platform).then(deleted => {
+          if (deleted) addMessage({ type: 'success', text: `Credentials fuer "${platform}" geloescht.` });
+          else addMessage({ type: 'error', text: `Keine Credentials fuer "${platform}" gefunden.` });
+        });
+        break;
+      }
+      addMessage({ type: 'error', text: 'Benutzung: /account add|revoke <platform>' });
+      break;
+    }
+    case 'accounts': {
+      const cs = sparkCell.credentialStore;
+      if (!cs) {
+        addMessage({ type: 'error', text: 'CredentialStore nicht verfuegbar.' });
+        break;
+      }
+      const platforms = cs.listPlatforms();
+      if (platforms.length === 0) {
+        addMessage({ type: 'system', text: 'Keine gespeicherten Accounts.' });
+      } else {
+        addMessage({ type: 'system', text: `${platforms.length} Account(s):` });
+        for (const p of platforms) {
+          addMessage({ type: 'system', text: `  ${p.platform} (User: ${p.hasUsername ? 'ja' : 'nein'}) — gespeichert: ${p.storedAt}` });
+        }
+      }
+      break;
+    }
     case 'help': {
       addMessage({ type: 'system', text: 'Befehle:' });
       addMessage({ type: 'system', text: '  @all <msg>         — Nachricht ans ganze Team' });
@@ -320,6 +371,9 @@ function handleCommand(text, sparkCell, addMessage) {
       addMessage({ type: 'system', text: '  /tools [core|custom] — Tools auflisten' });
       addMessage({ type: 'system', text: '  /allow <tool>      — Tool erlauben (auto)' });
       addMessage({ type: 'system', text: '  /deny <tool>       — Tool sperren' });
+      addMessage({ type: 'system', text: '  /account add <plattform> — Zugangsdaten hinzufuegen' });
+      addMessage({ type: 'system', text: '  /accounts          — Gespeicherte Accounts' });
+      addMessage({ type: 'system', text: '  /account revoke <plattform> — Zugang loeschen' });
       addMessage({ type: 'system', text: '  /blockers          — Offene Blocker zeigen' });
       addMessage({ type: 'system', text: '  /resolve <id>      — Blocker loesen' });
       addMessage({ type: 'system', text: '  /pause [agent]     — Pausieren' });

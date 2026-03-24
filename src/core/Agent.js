@@ -18,6 +18,7 @@ export class Agent extends EventEmitter {
   #contextManager;
   #workDir;
   #browserManager;
+  #credentialStore;
   #customToolsDir;
   #taskQueue = [];
   #currentTask = null;
@@ -37,6 +38,7 @@ export class Agent extends EventEmitter {
     this.#whiteboard = options.whiteboard || null;
     this.#toolRunner = options.toolRunner || null;
     this.#browserManager = options.browserManager || null;
+    this.#credentialStore = options.credentialStore || null;
     this.#workDir = options.workDir || null;
     this.#customToolsDir = options.customToolsDir || null;
     this.#contextManager = new ContextManager({ maxTokens: 128000 });
@@ -265,6 +267,7 @@ export class Agent extends EventEmitter {
           outputDir: this.#outputDir,
           customToolsDir: this.#customToolsDir,
           browserManager: this.#browserManager,
+          credentialStore: this.#credentialStore,
           bus: this.#bus,
           toolRunner: this.#toolRunner,
         };

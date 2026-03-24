@@ -16,6 +16,7 @@ import { ToolRunner } from './tools/ToolRunner.js';
 import { ToolPermissions } from './tools/ToolPermissions.js';
 import { createSandboxedTool } from './tools/meta/CreateToolTool.js';
 import { BrowserManager } from './tools/BrowserManager.js';
+import { CredentialStore } from './core/CredentialStore.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -29,6 +30,7 @@ export class SparkCell extends EventEmitter {
   #fileLock;
   #toolRunner;
   #browserManager;
+  #credentialStore;
   #intervals = [];
   #running = false;
   #paused = false;
@@ -64,9 +66,13 @@ export class SparkCell extends EventEmitter {
 
     // Create BrowserManager (Playwright loaded lazily)
     this.#browserManager = new BrowserManager({ logger: this.#logger });
+
+    // Create CredentialStore (initialized during initialize())
+    this.#credentialStore = null;
   }
 
   get toolRunner() { return this.#toolRunner; }
+  get credentialStore() { return this.#credentialStore; }
 
   get startupName() { return this.#startupName; }
   get agents() { return [...this.#agents.values()]; }
@@ -127,6 +133,15 @@ export class SparkCell extends EventEmitter {
       }
     }
 
+    // Initialize CredentialStore
+    const credPath = path.join(startupDir, 'credentials.enc.json');
+    this.#credentialStore = new CredentialStore(credPath);
+    await this.#errorHandler.safeAsync(
+      () => this.#credentialStore.initialize(),
+      null,
+      'credentials:init'
+    );
+
     // Register core tools
     const coreToolsDir = new URL('./tools/core/', import.meta.url).pathname;
     await this.#toolRunner.registerDirectory(coreToolsDir);
@@ -163,6 +178,7 @@ export class SparkCell extends EventEmitter {
         energyConfig: agentConfig.energy,
         toolRunner: this.#toolRunner,
         browserManager: this.#browserManager,
+        credentialStore: this.#credentialStore,
         workDir,
         customToolsDir: path.join(workDir, 'custom-tools'),
       });
