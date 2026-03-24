@@ -117,6 +117,72 @@ describe('SkillManager — Gap Detection', () => {
   });
 });
 
+describe('SkillManager — Quality Evaluation', () => {
+  it('rates empty output as zero', () => {
+    const sm = new SkillManager('dev', ['coding']);
+    const { score } = sm.evaluateQuality('', 'coding');
+    assert.equal(score, 0);
+  });
+
+  it('rates short output lower than long structured output', () => {
+    const sm = new SkillManager('dev', ['coding']);
+    const short = sm.evaluateQuality('ok done', 'coding');
+    const good = sm.evaluateQuality(
+      '## Implementierung\n\n- Erstelle REST API\n- Implementiere Auth\n- Teste Endpoints\n\n```js\nconst app = express();\n```\n\nNächster Schritt: Deploy.',
+      'coding'
+    );
+    assert.ok(good.score > short.score, 'Structured output should score higher');
+  });
+
+  it('penalizes coding tasks without code', () => {
+    const sm = new SkillManager('dev', ['coding']);
+    const { score, reasons } = sm.evaluateQuality(
+      'Wir sollten das System so bauen dass es gut funktioniert und die User zufrieden sind mit dem Ergebnis das wir liefern.',
+      'coding'
+    );
+    assert.ok(reasons.some(r => r.includes('Code')), 'Should flag missing code');
+  });
+
+  it('detects repetition', () => {
+    const sm = new SkillManager('dev', ['writing']);
+    const { reasons } = sm.evaluateQuality(
+      'Das System ist gut.\nDas System ist gut.\nDas System ist gut.\nDas System ist gut.\nDas System ist gut.',
+      'writing'
+    );
+    assert.ok(reasons.some(r => r.includes('Wiederholung')));
+  });
+});
+
+describe('SkillManager — Feedback & Self-Improvement', () => {
+  it('gives bonus XP for high quality output', () => {
+    const sm = new SkillManager('dev', ['coding']);
+    const xpBefore = sm.getSkills().get('coding').xp;
+    sm.applyFeedback('coding', 0.85);
+    const xpAfter = sm.getSkills().get('coding').xp;
+    assert.ok(xpAfter > xpBefore, 'XP should increase for good quality');
+  });
+
+  it('reduces XP and suggests training for poor quality', () => {
+    const sm = new SkillManager('dev', ['coding']);
+    const result = sm.applyFeedback('coding', 0.2);
+    assert.ok(result.needsTraining, 'Should need training');
+    assert.ok(result.trainingTask, 'Should provide training task');
+    assert.ok(result.trainingTask.title.includes('coding'));
+  });
+
+  it('does nothing special for mediocre quality', () => {
+    const sm = new SkillManager('dev', ['coding']);
+    const result = sm.applyFeedback('coding', 0.55);
+    assert.equal(result.needsTraining, false);
+  });
+
+  it('returns no training for unknown skills', () => {
+    const sm = new SkillManager('dev', []);
+    const result = sm.applyFeedback('unknown-skill', 0.1);
+    assert.equal(result.needsTraining, false);
+  });
+});
+
 describe('SkillManager — Skill Summary', () => {
   it('returns empty string for no skills', () => {
     const sm = new SkillManager('agent', []);

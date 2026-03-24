@@ -12,6 +12,8 @@ const EVENT_ICONS = {
   'energy-low': '\u26A0',    // ⚠
   'blocker-added': '\u26D4', // ⛔
   'decision-added': '\u2696', // ⚖
+  'skill-evaluation': '\u2B50', // ⭐
+  'chat-response': '\u{1F4AC}', // 💬
 };
 
 const EVENT_COLORS = {
@@ -24,6 +26,8 @@ const EVENT_COLORS = {
   'energy-low': 'yellow',
   'blocker-added': 'red',
   'decision-added': 'green',
+  'skill-evaluation': 'yellow',
+  'chat-response': 'cyan',
 };
 
 function formatTime(ts) {
@@ -52,6 +56,13 @@ function formatEvent(entry) {
       return `BLOCKER von ${name}: ${entry.blocker || '?'}`;
     case 'decision-added':
       return `DECISION von ${name}: ${entry.decision || '?'}`;
+    case 'skill-evaluation': {
+      const pct = ((entry.score || 0) * 100).toFixed(0);
+      const training = entry.needsTraining ? ' -> Training gestartet' : '';
+      return `${name} Skill "${entry.skill}": ${pct}%${training}`;
+    }
+    case 'chat-response':
+      return `${name} antwortet: ${(entry.response || '').slice(0, 80)}`;
     default:
       return `${name}: ${entry.type}`;
   }

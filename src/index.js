@@ -12,6 +12,8 @@ import { FileLock } from './utils/FileLock.js';
 import { Logger } from './utils/Logger.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
 import { LLMManager } from './llm/LLMManager.js';
+import { ToolRunner } from './tools/ToolRunner.js';
+import { ToolPermissions } from './tools/ToolPermissions.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -23,6 +25,7 @@ export class SparkCell extends EventEmitter {
   #logger;
   #errorHandler;
   #fileLock;
+  #toolRunner;
   #intervals = [];
   #running = false;
   #paused = false;
@@ -47,7 +50,17 @@ export class SparkCell extends EventEmitter {
     } else {
       this.llm = null;
     }
+
+    // Create ToolRunner with permission system
+    const permissions = new ToolPermissions();
+    this.#toolRunner = new ToolRunner({
+      permissions,
+      logger: this.#logger,
+      bus: this.#bus,
+    });
   }
+
+  get toolRunner() { return this.#toolRunner; }
 
   get startupName() { return this.#startupName; }
   get agents() { return [...this.#agents.values()]; }
@@ -108,7 +121,20 @@ export class SparkCell extends EventEmitter {
       }
     }
 
+    // Register core tools
+    const coreToolsDir = new URL('./tools/core/', import.meta.url).pathname;
+    await this.#toolRunner.registerDirectory(coreToolsDir);
+
+    // Load saved permissions
+    const permissionsPath = path.join(startupDir, 'permissions-state.json');
+    await this.#errorHandler.safeAsync(
+      () => this.#toolRunner.permissions.load(permissionsPath),
+      null,
+      'permissions:load'
+    );
+
     // Create agents from config
+    const workDir = paths.startup(this.#startupName);
     for (const agentConfig of (startupConfig.agents || [])) {
       if (agentConfig.active === false) continue;
       const agent = new Agent(agentConfig.id, {
@@ -121,6 +147,8 @@ export class SparkCell extends EventEmitter {
         startupDescription: startupConfig.description || '',
         whiteboard: this.#whiteboard,
         energyConfig: agentConfig.energy,
+        toolRunner: this.#toolRunner,
+        workDir,
       });
       this.#agents.set(agentConfig.id, agent);
     }
@@ -193,7 +221,15 @@ export class SparkCell extends EventEmitter {
       );
     }
 
-    // 3. Save whiteboard
+    // 3. Save tool permissions
+    const permissionsPath = path.join(paths.startup(this.#startupName), 'permissions-state.json');
+    await this.#errorHandler.safeAsync(
+      () => this.#toolRunner.permissions.save(permissionsPath),
+      null,
+      'permissions:save'
+    );
+
+    // 4. Save whiteboard
     const wbPath = path.join(paths.shared(this.#startupName), 'whiteboard.json');
     await this.#errorHandler.safeAsync(
       () => this.#whiteboard.save(wbPath),
@@ -201,7 +237,7 @@ export class SparkCell extends EventEmitter {
       'whiteboard:save'
     );
 
-    // 4. Remove session lock
+    // 5. Remove session lock
     const lockFile = path.join(paths.startup(this.#startupName), 'session.lock');
     await this.#errorHandler.safeAsync(
       () => fs.unlink(lockFile),
@@ -209,10 +245,10 @@ export class SparkCell extends EventEmitter {
       'session:unlock'
     );
 
-    // 5. Release file locks
+    // 6. Release file locks
     await this.#fileLock.releaseAll();
 
-    // 6. Flush logger
+    // 7. Flush logger
     await this.#logger.shutdown();
 
     this.emit('shutdown');

@@ -1,6 +1,7 @@
 import { OpenAICompatibleProvider } from './OpenAICompatibleProvider.js';
 import { AnthropicProvider } from './AnthropicProvider.js';
 import { getProvider } from './ProviderRegistry.js';
+import { injectToolsAsText, parseToolCallsFromText } from './ToolUseFallback.js';
 
 export class LLMManager {
   #providers = new Map();
@@ -42,8 +43,30 @@ export class LLMManager {
       if (this._isCircuitOpen(name)) continue;
       try {
         const provider = this.#providers.get(name);
-        const result = await provider.query(prompt, options);
+        let queryPrompt = prompt;
+        let queryOptions = options;
+        const needsFallback = options.tools && !provider.supportsToolUse;
+
+        if (needsFallback) {
+          // Inject tools as text instructions for models without tool-use
+          const messages = typeof prompt === 'string'
+            ? [{ role: 'user', content: prompt }]
+            : prompt;
+          queryPrompt = injectToolsAsText(messages, options.tools);
+          queryOptions = { ...options, tools: undefined };
+        }
+
+        const result = await provider.query(queryPrompt, queryOptions);
         this._recordSuccess(name);
+
+        if (needsFallback && result.content) {
+          // Parse tool calls from text response
+          const { cleanContent, toolCalls } = parseToolCallsFromText(result.content);
+          return { ...result, content: cleanContent, toolCalls };
+        }
+
+        // Ensure toolCalls is always present
+        if (!result.toolCalls) result.toolCalls = [];
         return result;
       } catch (error) {
         this._recordFailure(name);

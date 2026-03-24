@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useFeed } from '../hooks/useFeed.js';
@@ -21,6 +21,7 @@ export function ChatView({ sparkCell }) {
     { type: 'system', text: 'Chat bereit. Befehle: @all, @<agent>, /assign, /resolve, /status, /pause, /resume' },
   ]);
   const entries = useFeed(sparkCell?.bus, 20);
+  const subscribedRef = useRef(false);
 
   const addMessage = useCallback((msg) => {
     setMessages(prev => {
@@ -28,6 +29,36 @@ export function ChatView({ sparkCell }) {
       return next.length > 50 ? next.slice(-50) : next;
     });
   }, []);
+
+  // Listen for agent chat responses on the bus
+  useEffect(() => {
+    if (!sparkCell?.bus || subscribedRef.current) return;
+    subscribedRef.current = true;
+
+    sparkCell.bus.subscribe('agent:chat-response', (data) => {
+      addMessage({
+        type: 'response',
+        agent: data.agentName || data.agentId,
+        text: data.response?.slice(0, 500) || '...',
+      });
+    });
+
+    // Also show when agents start working on user tasks
+    sparkCell.bus.subscribe('agent:thinking', (data) => {
+      addMessage({
+        type: 'system',
+        text: `${data.agentName} denkt nach...`,
+      });
+    });
+
+    // Show errors
+    sparkCell.bus.subscribe('agent:error', (data) => {
+      addMessage({
+        type: 'error',
+        text: `${data.agentName}: Fehler — ${data.error}`,
+      });
+    });
+  }, [sparkCell, addMessage]);
 
   const handleSubmit = useCallback((value) => {
     if (!value.trim()) return;
@@ -252,6 +283,8 @@ function handleMessage(text, sparkCell, addMessage) {
     timestamp: Date.now(),
   });
 
+  const conversationId = `conv-${Date.now()}`;
+
   if (target === 'all') {
     // Assign as task to all agents
     for (const agent of sparkCell.agents) {
@@ -261,6 +294,7 @@ function handleMessage(text, sparkCell, addMessage) {
         description: `Der User hat folgende Anweisung gegeben: "${message}". Reagiere darauf und liefere ein Ergebnis.`,
         priority: 'high',
         source: 'user',
+        conversationId,
       });
     }
     addMessage({ type: 'success', text: `Nachricht an alle ${sparkCell.agents.length} Agents gesendet.` });
@@ -273,6 +307,7 @@ function handleMessage(text, sparkCell, addMessage) {
         description: `Der User hat dir folgende Anweisung gegeben: "${message}". Reagiere darauf und liefere ein Ergebnis.`,
         priority: 'high',
         source: 'user',
+        conversationId,
       });
       addMessage({ type: 'success', text: `Nachricht an ${agent.name} gesendet.` });
     } else {

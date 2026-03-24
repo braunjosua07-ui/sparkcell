@@ -6,6 +6,7 @@ import { EnergyManager } from './EnergyManager.js';
 import { SkillManager } from './SkillManager.js';
 import { AgentMemory } from './AgentMemory.js';
 import { TaskGenerator } from './TaskGenerator.js';
+import { ContextManager } from '../tools/ContextManager.js';
 
 export class Agent extends EventEmitter {
   #bus;
@@ -13,6 +14,9 @@ export class Agent extends EventEmitter {
   #outputDir;
   #startupDescription;
   #whiteboard;
+  #toolRunner;
+  #contextManager;
+  #workDir;
   #taskQueue = [];
   #currentTask = null;
   #cycleCount = 0;
@@ -29,6 +33,9 @@ export class Agent extends EventEmitter {
     this.#outputDir = options.outputDir || null;
     this.#startupDescription = options.startupDescription || '';
     this.#whiteboard = options.whiteboard || null;
+    this.#toolRunner = options.toolRunner || null;
+    this.#workDir = options.workDir || null;
+    this.#contextManager = new ContextManager({ maxTokens: 128000 });
 
     this.stateMachine = new StateMachine(id);
     this.energy = new EnergyManager(id, options.energyConfig);
@@ -167,6 +174,16 @@ export class Agent extends EventEmitter {
         // No LLM — simulate with cycle counting
         this.#currentTask.cyclesWorked = (this.#currentTask.cyclesWorked || 0) + 1;
         if (this.#currentTask.cyclesWorked >= (this.#currentTask.estimatedCycles || 3)) {
+          // Send simulated chat response for user tasks
+          if (this.#currentTask.source === 'user' && this.#currentTask.conversationId && this.#bus) {
+            this.#bus.publish('agent:chat-response', {
+              agentId: this.id,
+              agentName: this.name,
+              conversationId: this.#currentTask.conversationId,
+              response: `[Simulation] Task "${this.#currentTask.title}" abgeschlossen. (Kein LLM konfiguriert)`,
+              task: this.#currentTask.title,
+            });
+          }
           await this.#completeTask();
         }
       }
@@ -188,12 +205,99 @@ export class Agent extends EventEmitter {
 
   async #doLLMWork() {
     const task = this.#currentTask;
-    const prompt = this.#buildPrompt(task);
 
     if (this.#bus) this.#bus.publish('agent:thinking', {
       agentId: this.id, agentName: this.name, task: task.title,
     });
 
+    // If toolRunner is available, use the agentic loop; otherwise single-shot
+    if (this.#toolRunner) {
+      await this.#agenticLoop(task);
+    } else {
+      await this.#singleShotLLM(task);
+    }
+  }
+
+  async #agenticLoop(task) {
+    const messages = this.#buildPrompt(task);
+    const toolDefs = this.#toolRunner.getToolDefinitions('openai');
+    const maxIterations = 25;
+    let failCount = 0;
+    let finalContent = '';
+
+    for (let i = 0; i < maxIterations; i++) {
+      // Check context budget
+      if (this.#contextManager.shouldSummarize(messages)) {
+        const summarized = await this.#contextManager.summarize(messages, this.#llm);
+        messages.length = 0;
+        messages.push(...summarized);
+      }
+
+      const result = await this.#llm.query(messages, {
+        temperature: 0.8,
+        maxTokens: 4096,
+        tools: toolDefs,
+        signal: AbortSignal.timeout(60000),
+      });
+
+      const content = result?.content || '';
+      const toolCalls = result?.toolCalls || [];
+
+      // If the LLM returned text with no tool calls, task is done
+      if (toolCalls.length === 0) {
+        finalContent = content;
+        break;
+      }
+
+      // Add assistant message with tool calls to context
+      messages.push({ role: 'assistant', content: content || null, tool_calls: toolCalls });
+
+      // Execute each tool call
+      for (const call of toolCalls) {
+        const toolContext = {
+          agentId: this.id,
+          agentName: this.name,
+          workDir: this.#workDir || this.#outputDir,
+          outputDir: this.#outputDir,
+          bus: this.#bus,
+          toolRunner: this.#toolRunner,
+        };
+
+        try {
+          const toolResult = await this.#toolRunner.execute(this.id, call.name, call.args, toolContext);
+          const resultStr = this.#contextManager.truncateToolResult(
+            JSON.stringify(toolResult),
+            call.name === 'bash' ? 2000 : 4000,
+          );
+          messages.push({ role: 'tool', tool_call_id: call.id, content: resultStr });
+          if (!toolResult.success) {
+            failCount++;
+            if (failCount >= 3) break;
+          }
+        } catch (err) {
+          messages.push({
+            role: 'tool', tool_call_id: call.id,
+            content: JSON.stringify({ error: true, message: err.message }),
+          });
+          failCount++;
+          if (failCount >= 3) break;
+        }
+      }
+
+      if (failCount >= 3) {
+        finalContent = content || 'Task abgebrochen: zu viele Tool-Fehler.';
+        break;
+      }
+
+      // If LLM returned text along with tool calls, accumulate it
+      if (content) finalContent += content + '\n';
+    }
+
+    await this.#processLLMResult(task, finalContent);
+  }
+
+  async #singleShotLLM(task) {
+    const prompt = this.#buildPrompt(task);
     const result = await this.#llm.query(prompt, {
       temperature: 0.8,
       maxTokens: 4096,
@@ -201,7 +305,13 @@ export class Agent extends EventEmitter {
     });
 
     const content = result?.content || '';
-    if (!content) return; // LLM returned empty — skip, retry next cycle
+    if (!content) return;
+
+    await this.#processLLMResult(task, content);
+  }
+
+  async #processLLMResult(task, content) {
+    if (!content) return;
 
     // Store in memory
     this.memory.store(
@@ -210,7 +320,7 @@ export class Agent extends EventEmitter {
       { importance: 'high', tags: [task.source || 'work', this.role] },
     );
 
-    // Phase 2: Parse blockers and decisions from LLM output
+    // Parse blockers and decisions from LLM output
     this.#parseStructuredOutput(content);
 
     // Save output to file
@@ -219,16 +329,55 @@ export class Agent extends EventEmitter {
     }
 
     // Publish result
-    if (this.#bus) this.#bus.publish('agent:output', {
-      agentId: this.id,
-      agentName: this.name,
-      task: task.title,
-      preview: content.slice(0, 200),
-      tokens: result.usage?.total_tokens || 0,
-    });
+    if (this.#bus) {
+      this.#bus.publish('agent:output', {
+        agentId: this.id,
+        agentName: this.name,
+        task: task.title,
+        preview: content.slice(0, 200),
+      });
 
-    // Practice the skill most relevant to this task
-    this.skills.learnFromTask(task, 0.2);
+      if (task.source === 'user' && task.conversationId) {
+        this.#bus.publish('agent:chat-response', {
+          agentId: this.id,
+          agentName: this.name,
+          conversationId: task.conversationId,
+          response: content,
+          task: task.title,
+        });
+      }
+    }
+
+    // Practice the skill most relevant to this task + evaluate quality
+    const matchedSkill = this.skills.learnFromTask(task, 0.2);
+
+    if (matchedSkill) {
+      const { score, reasons } = this.skills.evaluateQuality(content, matchedSkill);
+      const feedback = this.skills.applyFeedback(matchedSkill, score);
+
+      if (this.#bus) {
+        this.#bus.publish('agent:skill-evaluation', {
+          agentId: this.id,
+          agentName: this.name,
+          skill: matchedSkill,
+          score,
+          reasons,
+          needsTraining: feedback.needsTraining,
+        });
+      }
+
+      if (feedback.needsTraining && feedback.trainingTask) {
+        this.#taskQueue.push({
+          id: `training-${matchedSkill}-${Date.now()}`,
+          ...feedback.trainingTask,
+        });
+        this.memory.store(
+          `skill-gap-${matchedSkill}-${Date.now()}`,
+          `Skill "${matchedSkill}" braucht Training (Score: ${(score * 100).toFixed(0)}%). Gründe: ${reasons.join(', ')}`,
+          { importance: 'high', tags: ['self-improvement', matchedSkill] },
+        );
+      }
+    }
 
     await this.#completeTask();
   }
@@ -284,9 +433,15 @@ export class Agent extends EventEmitter {
       whiteboardContext,
     ].filter(Boolean).join('\n');
 
+    // If this is a direct user message, frame it as a conversation
+    const isUserMessage = task.source === 'user';
+    const userContent = isUserMessage
+      ? `Der User hat dir direkt geschrieben: "${task.description.replace(/^.*?:\s*"?|"?\s*\.?\s*Reagiere darauf.*$/g, '')}"\n\nAntworte direkt und hilfreich. Halte deine Antwort kurz und klar.`
+      : `Aufgabe: ${task.title}\n\n${task.description}\n\nLiefere ein konkretes Ergebnis für diese Aufgabe. Berücksichtige was deine Teamkollegen bereits erarbeitet haben.`;
+
     return [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Aufgabe: ${task.title}\n\n${task.description}\n\nLiefere ein konkretes Ergebnis für diese Aufgabe. Berücksichtige was deine Teamkollegen bereits erarbeitet haben.` },
+      { role: 'user', content: userContent },
     ];
   }
 

@@ -126,6 +126,102 @@ export class SkillManager {
   }
 
   /**
+   * Evaluate output quality for a skill. Returns a score 0-1.
+   * Uses heuristics: length, structure, actionability.
+   * @param {string} output - The LLM output
+   * @param {string} skillName - The skill used
+   * @returns {{ score: number, reasons: string[] }}
+   */
+  evaluateQuality(output, skillName) {
+    if (!output) return { score: 0, reasons: ['Kein Output'] };
+
+    const reasons = [];
+    let score = 0.5; // baseline
+
+    // Length check — too short = low effort
+    if (output.length < 50) {
+      score -= 0.3;
+      reasons.push('Output zu kurz');
+    } else if (output.length > 200) {
+      score += 0.1;
+    }
+
+    // Structure check — has headings, lists, or code blocks
+    const hasStructure = /^#+\s|^[-*]\s|```/m.test(output);
+    if (hasStructure) {
+      score += 0.15;
+      reasons.push('Gut strukturiert');
+    } else if (output.length > 300) {
+      score -= 0.1;
+      reasons.push('Fehlende Struktur');
+    }
+
+    // Actionability — contains concrete items
+    const hasActionable = /\b(implementier|erstell|definier|plan|schritt|todo|next|deploy|test|launch)\b/i.test(output);
+    if (hasActionable) {
+      score += 0.15;
+      reasons.push('Enthält konkrete Aktionen');
+    }
+
+    // Repetition penalty — same phrases repeated
+    const sentences = output.split(/[.!?\n]+/).filter(s => s.trim().length > 10);
+    const unique = new Set(sentences.map(s => s.trim().toLowerCase()));
+    if (sentences.length > 3 && unique.size < sentences.length * 0.6) {
+      score -= 0.2;
+      reasons.push('Zu viele Wiederholungen');
+    }
+
+    // Skill-specific checks
+    if (skillName === 'coding' && !/[{(=;]|function|class|const|let|def |import /i.test(output)) {
+      score -= 0.15;
+      reasons.push('Coding-Task ohne Code');
+    }
+
+    return { score: Math.max(0, Math.min(1, score)), reasons };
+  }
+
+  /**
+   * Apply quality feedback to a skill — boost XP for good work, reduce for bad.
+   * Returns training suggestion if quality is too low.
+   * @param {string} skillName
+   * @param {number} qualityScore - 0 to 1
+   * @returns {{ needsTraining: boolean, trainingTask?: { title: string, description: string } }}
+   */
+  applyFeedback(skillName, qualityScore) {
+    let entry = this.#skills.get(skillName);
+    if (!entry) return { needsTraining: false };
+
+    if (qualityScore >= 0.7) {
+      // Good output — bonus XP
+      entry.xp += 50;
+      entry.level = xpToLevel(entry.xp);
+      return { needsTraining: false };
+    }
+
+    if (qualityScore < 0.4) {
+      // Poor output — reduce XP slightly and suggest training
+      entry.xp = Math.max(0, entry.xp - 30);
+      entry.level = xpToLevel(entry.xp);
+
+      return {
+        needsTraining: true,
+        trainingTask: {
+          title: `Skill-Training: ${skillName} verbessern`,
+          description: `Dein letzter Output im Bereich "${skillName}" war unter dem erwarteten Niveau (Score: ${(qualityScore * 100).toFixed(0)}%). ` +
+            `Übe gezielt: Erstelle ein Beispiel-Ergebnis für eine typische ${skillName}-Aufgabe. ` +
+            `Fokussiere auf Struktur, Konkretheit und Qualität.`,
+          priority: 'medium',
+          source: 'self-improvement',
+          skillTarget: skillName,
+        },
+      };
+    }
+
+    // Mediocre — no XP change, no training
+    return { needsTraining: false };
+  }
+
+  /**
    * Find skills the agent is weak at (below threshold) that are relevant to given goals.
    * @param {string[]} goals - mission goals or task descriptions
    * @param {number} threshold - level below which a skill is considered a gap
