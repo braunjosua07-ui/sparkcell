@@ -18,7 +18,7 @@ import { useFeed } from '../hooks/useFeed.js';
 export function ChatView({ sparkCell }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
-    { type: 'system', text: 'Chat bereit. Befehle: @all, @<agent>, /assign, /resolve, /status, /pause, /resume' },
+    { type: 'system', text: 'Chat bereit. Befehle: @all, @<agent>, /assign, /tools, /allow, /deny, /status, /help' },
   ]);
   const entries = useFeed(sparkCell?.bus, 20);
   const subscribedRef = useRef(false);
@@ -56,6 +56,20 @@ export function ChatView({ sparkCell }) {
       addMessage({
         type: 'error',
         text: `${data.agentName}: Fehler — ${data.error}`,
+      });
+    });
+
+    // Show permission requests
+    sparkCell.bus.subscribe('tool:permission-requested', (data) => {
+      const agent = data.agentName || data.agentId || '?';
+      const argPreview = data.args ? JSON.stringify(data.args).slice(0, 80) : '';
+      addMessage({
+        type: 'system',
+        text: `${agent} braucht Erlaubnis fuer "${data.toolName}": ${argPreview}`,
+      });
+      addMessage({
+        type: 'system',
+        text: `  /allow ${data.toolName} = immer erlauben | Timeout: 60s`,
       });
     });
   }, [sparkCell, addMessage]);
@@ -249,12 +263,63 @@ function handleCommand(text, sparkCell, addMessage) {
       }
       break;
     }
+    case 'tools': {
+      const tr = sparkCell.toolRunner;
+      if (!tr) {
+        addMessage({ type: 'error', text: 'ToolRunner nicht verfuegbar.' });
+        break;
+      }
+      const filter = parts[1] || 'all';
+      const names = tr.getToolNames();
+      const count = tr.getToolCount();
+      addMessage({ type: 'system', text: `Tools: ${count.total} gesamt (${count.core} core, ${count.custom} custom)` });
+      const filtered = names.filter(n => {
+        if (filter === 'custom') return tr.isCustomTool(n);
+        if (filter === 'core') return !tr.isCustomTool(n);
+        return true;
+      });
+      for (const name of filtered) {
+        const perm = tr.permissions.getRule(name);
+        const tag = tr.isCustomTool(name) ? ' [custom]' : '';
+        addMessage({ type: 'system', text: `  ${name} (${perm})${tag}` });
+      }
+      break;
+    }
+    case 'allow': {
+      const toolName = parts[1];
+      if (!toolName) {
+        addMessage({ type: 'error', text: 'Benutzung: /allow <tool-name>' });
+        break;
+      }
+      const tr = sparkCell.toolRunner;
+      if (!tr) { addMessage({ type: 'error', text: 'ToolRunner nicht verfuegbar.' }); break; }
+      tr.permissions.setRule(toolName, 'auto');
+      // Also grant any pending approval
+      sparkCell.bus.publish('tool:permission-granted', { actionKey: `*:${toolName}`, toolName });
+      addMessage({ type: 'success', text: `Tool "${toolName}" auf auto gesetzt.` });
+      break;
+    }
+    case 'deny': {
+      const toolName = parts[1];
+      if (!toolName) {
+        addMessage({ type: 'error', text: 'Benutzung: /deny <tool-name>' });
+        break;
+      }
+      const tr = sparkCell.toolRunner;
+      if (!tr) { addMessage({ type: 'error', text: 'ToolRunner nicht verfuegbar.' }); break; }
+      tr.permissions.setRule(toolName, 'deny');
+      addMessage({ type: 'success', text: `Tool "${toolName}" gesperrt.` });
+      break;
+    }
     case 'help': {
       addMessage({ type: 'system', text: 'Befehle:' });
       addMessage({ type: 'system', text: '  @all <msg>         — Nachricht ans ganze Team' });
       addMessage({ type: 'system', text: '  @<agent> <msg>     — Nachricht an einen Agent' });
       addMessage({ type: 'system', text: '  /status            — Team-Status anzeigen' });
       addMessage({ type: 'system', text: '  /assign <id> <task> — Task zuweisen' });
+      addMessage({ type: 'system', text: '  /tools [core|custom] — Tools auflisten' });
+      addMessage({ type: 'system', text: '  /allow <tool>      — Tool erlauben (auto)' });
+      addMessage({ type: 'system', text: '  /deny <tool>       — Tool sperren' });
       addMessage({ type: 'system', text: '  /blockers          — Offene Blocker zeigen' });
       addMessage({ type: 'system', text: '  /resolve <id>      — Blocker loesen' });
       addMessage({ type: 'system', text: '  /pause [agent]     — Pausieren' });

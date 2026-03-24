@@ -14,6 +14,7 @@ import { ErrorHandler } from './utils/ErrorHandler.js';
 import { LLMManager } from './llm/LLMManager.js';
 import { ToolRunner } from './tools/ToolRunner.js';
 import { ToolPermissions } from './tools/ToolPermissions.js';
+import { createSandboxedTool } from './tools/meta/CreateToolTool.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -125,6 +126,14 @@ export class SparkCell extends EventEmitter {
     const coreToolsDir = new URL('./tools/core/', import.meta.url).pathname;
     await this.#toolRunner.registerDirectory(coreToolsDir);
 
+    // Register meta-tools
+    const metaToolsDir = new URL('./tools/meta/', import.meta.url).pathname;
+    await this.#toolRunner.registerDirectory(metaToolsDir);
+
+    // Load custom tools from previous sessions
+    const customToolsDir = path.join(startupDir, 'custom-tools');
+    await this.#loadCustomTools(customToolsDir);
+
     // Load saved permissions
     const permissionsPath = path.join(startupDir, 'permissions-state.json');
     await this.#errorHandler.safeAsync(
@@ -149,6 +158,7 @@ export class SparkCell extends EventEmitter {
         energyConfig: agentConfig.energy,
         toolRunner: this.#toolRunner,
         workDir,
+        customToolsDir: path.join(workDir, 'custom-tools'),
       });
       this.#agents.set(agentConfig.id, agent);
     }
@@ -163,6 +173,26 @@ export class SparkCell extends EventEmitter {
 
     this.#logger.info(`Initialized ${this.#agents.size} agents for ${this.#startupName}`);
     this.emit('initialized', { agents: this.#agents.size });
+  }
+
+  async #loadCustomTools(customToolsDir) {
+    let entries;
+    try {
+      entries = await fs.readdir(customToolsDir);
+    } catch {
+      return; // No custom tools directory yet
+    }
+    for (const entry of entries) {
+      if (!entry.endsWith('.tool.json')) continue;
+      try {
+        const data = JSON.parse(await fs.readFile(path.join(customToolsDir, entry), 'utf8'));
+        const tool = createSandboxedTool(data.name, data.description, data.parameters, data.code);
+        this.#toolRunner.registerTool(tool);
+        this.#logger.info(`Loaded custom tool: ${data.name}`);
+      } catch (err) {
+        this.#logger.warn(`Failed to load custom tool ${entry}: ${err.message}`);
+      }
+    }
   }
 
   async start() {

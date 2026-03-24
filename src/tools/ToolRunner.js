@@ -175,4 +175,19 @@ export class ToolRunner {
   hasTool(name) {
     return this.#tools.has(name);
   }
+
+  getTool(name) {
+    return this.#tools.get(name) || null;
+  }
+
+  isCustomTool(name) {
+    const tool = this.#tools.get(name);
+    return tool?.isCustom === true;
+  }
+
+  getToolCount() {
+    const names = [...this.#tools.values()];
+    const custom = names.filter(t => t.isCustom).length;
+    return { total: names.length, core: names.length - custom, custom };
+  }
 }

@@ -14,6 +14,11 @@ const EVENT_ICONS = {
   'decision-added': '\u2696', // ⚖
   'skill-evaluation': '\u2B50', // ⭐
   'chat-response': '\u{1F4AC}', // 💬
+  'tool-executed': '\u{1F528}', // 🔨
+  'tool-created': '\u2B50',    // ⭐
+  'tool-permission-requested': '\u{1F512}', // 🔒
+  'tool-permission-granted': '\u{1F511}',   // 🔑
+  'tool-failed': '\u2718',     // ✘
 };
 
 const EVENT_COLORS = {
@@ -28,6 +33,11 @@ const EVENT_COLORS = {
   'decision-added': 'green',
   'skill-evaluation': 'yellow',
   'chat-response': 'cyan',
+  'tool-executed': 'blue',
+  'tool-created': 'green',
+  'tool-permission-requested': 'yellow',
+  'tool-permission-granted': 'green',
+  'tool-failed': 'red',
 };
 
 function formatTime(ts) {
@@ -63,6 +73,18 @@ function formatEvent(entry) {
     }
     case 'chat-response':
       return `${name} antwortet: ${(entry.response || '').slice(0, 80)}`;
+    case 'tool-executed': {
+      const status = entry.success ? 'ok' : 'fehlgeschlagen';
+      return `${name} -> ${entry.toolName || '?'}: ${status}`;
+    }
+    case 'tool-created':
+      return `${name} erstellt Tool: ${entry.toolName || '?'}`;
+    case 'tool-permission-requested':
+      return `${name} braucht Erlaubnis fuer: ${entry.toolName || '?'}`;
+    case 'tool-permission-granted':
+      return `Erlaubnis erteilt: ${entry.actionKey || '?'}`;
+    case 'tool-failed':
+      return `${name} Tool-Fehler: ${entry.toolName || '?'} — ${entry.error || ''}`;
     default:
       return `${name}: ${entry.type}`;
   }

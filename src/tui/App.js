@@ -8,8 +8,9 @@ import { TasksView } from './components/TasksView.js';
 import { SkillsView } from './components/SkillsView.js';
 import { PauseRoomView } from './components/PauseRoomView.js';
 import { ChatView } from './components/ChatView.js';
+import { ToolsView } from './components/ToolsView.js';
 
-const TABS = ['Feed', 'Chat', 'Agents', 'Tasks', 'Skills', 'Pause'];
+const TABS = ['Feed', 'Chat', 'Agents', 'Tasks', 'Skills', 'Pause', 'Tools'];
 
 export function App({ sparkCell }) {
   const [activeTab, setActiveTab] = useState('Feed');
@@ -32,6 +33,7 @@ export function App({ sparkCell }) {
     Tasks: React.createElement(TasksView, viewProps),
     Skills: React.createElement(SkillsView, viewProps),
     Pause: React.createElement(PauseRoomView, viewProps),
+    Tools: React.createElement(ToolsView, viewProps),
   };
 
   return React.createElement(Box, { flexDirection: 'column', height: '100%' },
@@ -43,7 +45,7 @@ export function App({ sparkCell }) {
       ),
     ),
     React.createElement(Box, { paddingX: 1, borderStyle: 'single', borderColor: 'gray' },
-      React.createElement(Text, { dimColor: true }, '1-6: Tabs  |  2: Chat  |  Ctrl+P: Pause  |  Ctrl+Q: Quit'),
+      React.createElement(Text, { dimColor: true }, '1-7: Tabs  |  2: Chat  |  7: Tools  |  Ctrl+P: Pause  |  Ctrl+Q: Quit'),
     ),
   );
 }

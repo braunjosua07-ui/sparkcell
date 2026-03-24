@@ -23,6 +23,11 @@ export function useFeed(bus, maxEntries = 100) {
       bus.subscribe('whiteboard:decision-added', addEntry('decision-added')),
       bus.subscribe('agent:skill-evaluation', addEntry('skill-evaluation')),
       bus.subscribe('agent:chat-response', addEntry('chat-response')),
+      bus.subscribe('tool:executed', addEntry('tool-executed')),
+      bus.subscribe('tool:created', addEntry('tool-created')),
+      bus.subscribe('tool:failed', addEntry('tool-failed')),
+      bus.subscribe('tool:permission-requested', addEntry('tool-permission-requested')),
+      bus.subscribe('tool:permission-granted', addEntry('tool-permission-granted')),
     ];
     return () => unsubs.forEach(u => u());
   }, [bus]);
