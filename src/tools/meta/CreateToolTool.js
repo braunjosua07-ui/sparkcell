@@ -30,9 +30,9 @@ export default class CreateToolTool {
       return { success: false, output: null, error: `Tool "${toolName}" already exists. Use a different name.` };
     }
 
-    // Validate the code can be parsed
+    // Validate the code can be parsed (syntax check only, no execution)
     try {
-      new Function('args', 'context', code);
+      new vm.Script(`(async (args, context) => { ${code} })`, { filename: `validate-${toolName}.js` });
     } catch (err) {
       return { success: false, output: null, error: `Syntax error in tool code: ${err.message}` };
     }

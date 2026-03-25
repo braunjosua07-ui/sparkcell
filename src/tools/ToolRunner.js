@@ -153,7 +153,10 @@ export class ToolRunner {
       const actionKey = `${agentId}:${toolName}`;
 
       const unsub = this.#bus.subscribe('tool:permission-granted', (data) => {
-        if (data.actionKey === actionKey) {
+        // Support both exact match (agentId:toolName) and wildcard (*:toolName)
+        const matches = data.actionKey === actionKey
+          || data.actionKey === `*:${toolName}`;
+        if (matches) {
           clearTimeout(timeout);
           unsub();
           this.#permissions.approve(actionKey);

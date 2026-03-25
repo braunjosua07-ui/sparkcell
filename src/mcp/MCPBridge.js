@@ -71,7 +71,7 @@ export class MCPBridge {
   }
 
   async #connectOne(name, config) {
-    const adapter = new MCPClientAdapter(name, config, this.#logger);
+    const adapter = new MCPClientAdapter(name, config, this.#logger, this.#bus);
     this.#adapters.set(name, adapter);
 
     await adapter.connect();

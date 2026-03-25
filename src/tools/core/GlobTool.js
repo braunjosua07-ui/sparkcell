@@ -1,5 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { ToolValidator } from '../ToolValidator.js';
+
+const validator = new ToolValidator();
 
 export default class GlobTool {
   name = 'glob';
@@ -14,6 +17,9 @@ export default class GlobTool {
     const baseDir = args.path
       ? (path.isAbsolute(args.path) ? args.path : path.join(context.workDir, args.path))
       : context.workDir;
+    if (!validator.isPathAllowed(baseDir, context)) {
+      return { success: false, output: null, error: `Access denied: path "${args.path}" is outside the allowed directories` };
+    }
     try {
       const matches = await this.#globMatch(baseDir, args.pattern);
       return { success: true, output: matches.length > 0 ? matches.join('\n') : 'No files found' };

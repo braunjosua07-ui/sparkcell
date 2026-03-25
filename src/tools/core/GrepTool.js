@@ -1,5 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { ToolValidator } from '../ToolValidator.js';
+
+const validator = new ToolValidator();
 
 export default class GrepTool {
   name = 'grep';
@@ -15,6 +18,9 @@ export default class GrepTool {
     const searchPath = args.path
       ? (path.isAbsolute(args.path) ? args.path : path.join(context.workDir, args.path))
       : context.workDir;
+    if (!validator.isPathAllowed(searchPath, context)) {
+      return { success: false, output: null, error: `Access denied: path "${args.path}" is outside the allowed directories` };
+    }
 
     try {
       const results = [];

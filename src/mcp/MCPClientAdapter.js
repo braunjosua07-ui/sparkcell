@@ -3,37 +3,36 @@
  * as SparkCell-compatible tool objects.
  *
  * Supports stdio transport (local processes) and Streamable HTTP transport (remote servers).
+ * Tracks consecutive failures and auto-disconnects unhealthy servers.
  */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { ListToolsResultSchema, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
+const MAX_CONSECUTIVE_FAILURES = 3;
+
 export class MCPClientAdapter {
   #client;
   #transport;
   #serverName;
+  #config;
   #connected = false;
   #tools = [];
   #logger;
+  #consecutiveFailures = 0;
+  #bus;
 
-  constructor(serverName, config, logger = null) {
+  constructor(serverName, config, logger = null, bus = null) {
     this.#serverName = serverName;
+    this.#config = config;
     this.#logger = logger;
+    this.#bus = bus;
     this.#client = new Client(
       { name: `sparkcell-${serverName}`, version: '1.0.0' },
       { capabilities: {} },
     );
 
-    if (config.transport === 'stdio') {
-      this.#transport = new StdioClientTransport({
-        command: config.command,
-        args: config.args || [],
-        env: config.env || undefined,
-      });
-    } else if (config.transport === 'http') {
-      // Dynamically import StreamableHTTPClientTransport only when needed
-      this._httpConfig = config;
-    } else {
+    if (config.transport !== 'stdio' && config.transport !== 'http') {
       throw new Error(`Unsupported MCP transport: "${config.transport}". Use "stdio" or "http".`);
     }
   }
@@ -43,20 +42,25 @@ export class MCPClientAdapter {
   get toolCount() { return this.#tools.length; }
 
   async connect() {
-    // Handle HTTP transport lazy init
-    if (this._httpConfig) {
+    if (this.#config.transport === 'stdio') {
+      this.#transport = new StdioClientTransport({
+        command: this.#config.command,
+        args: this.#config.args || [],
+        env: this.#config.env || undefined,
+      });
+    } else if (this.#config.transport === 'http') {
       const { StreamableHTTPClientTransport } = await import(
         '@modelcontextprotocol/sdk/client/streamableHttp.js'
       );
       this.#transport = new StreamableHTTPClientTransport(
-        new URL(this._httpConfig.url),
+        new URL(this.#config.url),
       );
-      delete this._httpConfig;
     }
 
     try {
       await this.#client.connect(this.#transport);
       this.#connected = true;
+      this.#consecutiveFailures = 0;
       this.#log('info', `Connected to MCP server: ${this.#serverName}`);
     } catch (err) {
       this.#log('warn', `Failed to connect to MCP server "${this.#serverName}": ${err.message}`);
@@ -130,6 +134,9 @@ export class MCPClientAdapter {
         CallToolResultSchema,
       );
 
+      // Success — reset failure counter
+      this.#consecutiveFailures = 0;
+
       // MCP returns content as array of {type, text/data} objects
       const output = (result.content || [])
         .map(c => {
@@ -147,6 +154,22 @@ export class MCPClientAdapter {
         error: isError ? output : null,
       };
     } catch (err) {
+      this.#consecutiveFailures++;
+      this.#log('warn', `MCP tool "${toolName}" failed on "${this.#serverName}" (${this.#consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${err.message}`);
+
+      // Auto-disconnect after too many consecutive failures
+      if (this.#consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        this.#log('warn', `MCP server "${this.#serverName}" marked unhealthy after ${MAX_CONSECUTIVE_FAILURES} consecutive failures — disconnecting`);
+        this.#connected = false;
+        if (this.#bus) {
+          this.#bus.publish('mcp:server-unhealthy', {
+            server: this.#serverName,
+            failures: this.#consecutiveFailures,
+            lastError: err.message,
+          });
+        }
+      }
+
       return { success: false, output: null, error: `MCP tool error (${toolName}): ${err.message}` };
     }
   }
@@ -167,6 +190,7 @@ export class MCPClientAdapter {
     return {
       name: this.#serverName,
       connected: this.#connected,
+      consecutiveFailures: this.#consecutiveFailures,
       tools: this.#tools.map(t => t.mcpToolName),
     };
   }

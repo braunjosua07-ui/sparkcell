@@ -4,7 +4,11 @@ export class ChatInterpreter {
 
   constructor(sparkCell) {
     this.#sparkCell = sparkCell;
-    this.#llm = null; // Will be wired to LLMManager later
+    this.#llm = sparkCell?.llm || null;
+  }
+
+  setLLM(llm) {
+    this.#llm = llm;
   }
 
   async interpret(message) {
@@ -91,8 +95,17 @@ Message: "${message}"
 
 Respond in JSON: { "action": "one of: direction, add_agent, remove_agent, assign_task, pause_all, resume_all, query_status, change_config, export, save_quit", "params": {}, "response": "user-friendly response" }`;
 
-    const result = await this.#llm.query(prompt, { jsonMode: true, temperature: 0.3 });
-    const parsed = JSON.parse(result.content);
+    const result = await this.#llm.query(
+      [{ role: 'user', content: prompt }],
+      { temperature: 0.3, maxTokens: 512 },
+    );
+
+    let parsed;
+    try {
+      parsed = JSON.parse(result.content);
+    } catch {
+      return result.content || 'Done.';
+    }
 
     // Execute action
     switch (parsed.action) {

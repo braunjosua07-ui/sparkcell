@@ -1,5 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { ToolValidator } from '../ToolValidator.js';
+
+const validator = new ToolValidator();
 
 export default class EditFileTool {
   name = 'editFile';
@@ -13,6 +16,9 @@ export default class EditFileTool {
 
   async execute(args, context) {
     const filePath = path.isAbsolute(args.path) ? args.path : path.join(context.workDir, args.path);
+    if (!validator.isPathAllowed(filePath, context)) {
+      return { success: false, output: null, error: `Access denied: path "${args.path}" is outside the allowed directories` };
+    }
     try {
       const content = await fs.readFile(filePath, 'utf8');
       if (!content.includes(args.oldString)) {
