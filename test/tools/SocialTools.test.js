@@ -87,7 +87,8 @@ describe('SocialLoginTool', () => {
     assert.ok(result.success);
     assert.equal(result.output.pageId, 'mock-page-1');
     assert.equal(result.output.platform, 'tiktok');
-    assert.ok(result.output.hints.username);
+    assert.ok(result.output.hints.usernameField);
+    assert.equal(result.output.hints.username, undefined); // credentials must not leak into output
   });
 });
 

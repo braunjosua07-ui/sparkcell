@@ -24,10 +24,12 @@ export class Agent extends EventEmitter {
   #discordWebhook;
   #customToolsDir;
   #taskQueue = [];
+  #completedTaskCount = 0;
   #currentTask = null;
   #cycleCount = 0;
   #working = false; // prevent overlapping LLM calls
   #peerOutputs = []; // last N outputs from other agents
+  #busSubscriptions = []; // track subscriptions for cleanup
 
   constructor(id, options = {}) {
     super();
@@ -62,7 +64,7 @@ export class Agent extends EventEmitter {
 
     // Phase 1: Listen to peer outputs and task completions
     if (this.#bus) {
-      this.#bus.subscribe('agent:output', (data) => {
+      const onOutput = (data) => {
         if (data.agentId === this.id) return; // skip own output
         this.#peerOutputs.push({
           agentId: data.agentId,
@@ -79,26 +81,31 @@ export class Agent extends EventEmitter {
           `${data.agentName} completed: ${data.task} — ${data.preview?.slice(0, 150) || ''}`,
           { importance: 'medium', tags: [`peer-${data.agentId}`, 'peer-work'] },
         );
-      });
+      };
 
-      this.#bus.subscribe('agent:task-completed', (data) => {
+      const onTaskCompleted = (data) => {
         if (data.agentId === this.id) return;
         this.memory.store(
           `peer-done-${data.agentId}-${Date.now()}`,
           `${data.agentName} finished task: ${data.task?.title || 'unknown'}`,
           { importance: 'low', tags: [`peer-${data.agentId}`, 'peer-completed'] },
         );
-      });
+      };
 
-      // Listen for user messages
-      this.#bus.subscribe('user:message', (data) => {
+      const onUserMessage = (data) => {
         if (data.target !== 'all' && data.target !== this.id) return;
         this.memory.store(
           `user-msg-${Date.now()}`,
           `User-Anweisung: ${data.message}`,
           { importance: 'high', tags: ['user', 'directive'] },
         );
-      });
+      };
+
+      this.#busSubscriptions.push(
+        this.#bus.subscribe('agent:output', onOutput),
+        this.#bus.subscribe('agent:task-completed', onTaskCompleted),
+        this.#bus.subscribe('user:message', onUserMessage),
+      );
     }
   }
 
@@ -126,7 +133,7 @@ export class Agent extends EventEmitter {
         const wb = this.#whiteboard.getState();
         const openBlockers = wb.blockers.filter(b => !b.resolved && b.agentId !== this.id);
         for (const blocker of openBlockers.slice(0, 1)) {
-          this.#taskQueue.push({
+          this.assignTask({
             id: `help-${blocker.id}-${Date.now()}`,
             title: `Help resolve: ${blocker.blocker}`,
             description: `A teammate (${blocker.agentId}) is blocked: "${blocker.blocker}". Use your skills as ${this.role} to help resolve this.`,
@@ -148,7 +155,7 @@ export class Agent extends EventEmitter {
           agentState: this.state,
           missionGoals,
         });
-        this.#taskQueue.push(...newTasks.slice(0, 3));
+        for (const t of newTasks.slice(0, 3)) this.assignTask(t);
       }
     }
     if (this.#taskQueue.length > 0) {
@@ -385,7 +392,7 @@ export class Agent extends EventEmitter {
       }
 
       if (feedback.needsTraining && feedback.trainingTask) {
-        this.#taskQueue.push({
+        this.assignTask({
           id: `training-${matchedSkill}-${Date.now()}`,
           ...feedback.trainingTask,
         });
@@ -533,7 +540,18 @@ export class Agent extends EventEmitter {
     }
   }
 
-  assignTask(task) { this.#taskQueue.push(task); }
+  destroy() {
+    for (const unsub of this.#busSubscriptions) unsub();
+    this.#busSubscriptions = [];
+    this.removeAllListeners();
+  }
+
+  assignTask(task) {
+    if (this.#taskQueue.length >= 200) {
+      this.#taskQueue.shift(); // drop oldest to stay within limit
+    }
+    this.#taskQueue.push(task);
+  }
 
   getStatus() {
     return {

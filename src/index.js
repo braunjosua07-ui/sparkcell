@@ -17,6 +17,7 @@ import { ToolPermissions } from './tools/ToolPermissions.js';
 import { createSandboxedTool } from './tools/meta/CreateToolTool.js';
 import { BrowserManager } from './tools/BrowserManager.js';
 import { CredentialStore } from './core/CredentialStore.js';
+import { MCPBridge } from './mcp/MCPBridge.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -31,6 +32,7 @@ export class SparkCell extends EventEmitter {
   #toolRunner;
   #browserManager;
   #credentialStore;
+  #mcpBridge;
   #intervals = [];
   #running = false;
   #paused = false;
@@ -73,6 +75,7 @@ export class SparkCell extends EventEmitter {
 
   get toolRunner() { return this.#toolRunner; }
   get credentialStore() { return this.#credentialStore; }
+  get mcpBridge() { return this.#mcpBridge; }
 
   get startupName() { return this.#startupName; }
   get agents() { return [...this.#agents.values()]; }
@@ -161,6 +164,20 @@ export class SparkCell extends EventEmitter {
       null,
       'permissions:load'
     );
+
+    // Connect to MCP servers (if configured)
+    if (startupConfig.mcpServers && Object.keys(startupConfig.mcpServers).length > 0) {
+      this.#mcpBridge = new MCPBridge({
+        toolRunner: this.#toolRunner,
+        logger: this.#logger,
+        bus: this.#bus,
+      });
+      await this.#errorHandler.safeAsync(
+        () => this.#mcpBridge.connectAll(startupConfig.mcpServers),
+        null,
+        'mcp:connect'
+      );
+    }
 
     // Create agents from config
     const workDir = paths.startup(this.#startupName);
@@ -267,13 +284,14 @@ export class SparkCell extends EventEmitter {
     }
     this.#intervals = [];
 
-    // 2. Save agent state
+    // 2. Save agent state and clean up subscriptions
     for (const agent of this.#agents.values()) {
       await this.#errorHandler.safeAsync(
         () => agent.save(),
         null,
         `agent:${agent.id}:save`
       );
+      agent.destroy();
     }
 
     // 3. Save tool permissions
@@ -292,7 +310,16 @@ export class SparkCell extends EventEmitter {
       'whiteboard:save'
     );
 
-    // 5. Close browser sessions
+    // 5. Disconnect MCP servers
+    if (this.#mcpBridge) {
+      await this.#errorHandler.safeAsync(
+        () => this.#mcpBridge.shutdown(),
+        null,
+        'mcp:shutdown'
+      );
+    }
+
+    // 6. Close browser sessions
     await this.#errorHandler.safeAsync(
       () => this.#browserManager.shutdown(),
       null,
@@ -344,6 +371,7 @@ export class SparkCell extends EventEmitter {
       paused: this.#paused,
       uptime: this.uptime,
       agents: this.agents.map(a => a.getStatus()),
+      mcp: this.#mcpBridge ? this.#mcpBridge.getStatus() : null,
     };
   }
 }

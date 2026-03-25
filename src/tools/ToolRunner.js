@@ -151,20 +151,22 @@ export class ToolRunner {
     if (!this.#bus) return false;
     return new Promise((resolve) => {
       const actionKey = `${agentId}:${toolName}`;
+
+      const unsub = this.#bus.subscribe('tool:permission-granted', (data) => {
+        if (data.actionKey === actionKey) {
+          clearTimeout(timeout);
+          unsub();
+          this.#permissions.approve(actionKey);
+          resolve(true);
+        }
+      });
+
       const timeout = setTimeout(() => {
+        unsub();
         resolve(false);
       }, 60000);
 
       this.#bus.publish('tool:permission-requested', { agentId, toolName, args });
-
-      const handler = (data) => {
-        if (data.actionKey === actionKey) {
-          clearTimeout(timeout);
-          this.#permissions.approve(actionKey);
-          resolve(true);
-        }
-      };
-      this.#bus.subscribe('tool:permission-granted', handler);
     });
   }
 

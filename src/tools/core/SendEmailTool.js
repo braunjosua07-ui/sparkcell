@@ -93,7 +93,7 @@ function sendSMTP({ host, port, secure, user, pass, from, to, subject, body }) {
 
     function createConnection() {
       if (secure) {
-        return tls.connect(port, host, { rejectUnauthorized: false });
+        return tls.connect(port, host, { rejectUnauthorized: true });
       }
       return net.connect(port, host);
     }

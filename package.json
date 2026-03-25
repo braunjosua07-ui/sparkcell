@@ -3,7 +3,9 @@
   "version": "2.0.0",
   "type": "module",
   "description": "Multi-Agent Startup Simulation Platform",
-  "bin": { "sparkcell": "./bin/sparkcell.js" },
+  "bin": {
+    "sparkcell": "./bin/sparkcell.js"
+  },
   "exports": "./src/index.js",
   "scripts": {
     "start": "node bin/sparkcell.js",
@@ -11,19 +13,23 @@
     "test:watch": "node --test --watch test/**/*.test.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "commander": "^12.0.0",
     "ink": "^5.0.0",
-    "ink-text-input": "^6.0.0",
+    "ink-box": "^2.0.0",
     "ink-select-input": "^6.0.0",
     "ink-spinner": "^5.0.0",
     "ink-table": "^3.0.0",
-    "ink-box": "^2.0.0",
+    "ink-text-input": "^6.0.0",
+    "proper-lockfile": "^4.1.2",
     "react": "^18.0.0",
-    "commander": "^12.0.0",
-    "proper-lockfile": "^4.1.2"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "eslint": "^9.0.0"
   },
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "license": "MIT"
 }

@@ -56,20 +56,29 @@ export default class SocialLoginTool {
       const creds = credStore.get(platformKey);
       const { pageId } = await bm.open(context.agentId, loginUrl);
 
-      // Platform-specific login flows would go here.
-      // For now, provide the pageId so the agent can navigate manually.
+      // Auto-fill credentials into the page so they never appear in tool output
+      const page = bm.getPage(context.agentId, pageId);
+      if (page && creds.username) {
+        const userSelectors = 'input[name="username"], input[type="email"], input[name="email"]';
+        const passSelectors = 'input[name="password"], input[type="password"]';
+        try {
+          await page.fill(userSelectors, creds.username);
+          if (creds.password) await page.fill(passSelectors, creds.password);
+        } catch {
+          // Fields not found yet — agent can retry with browserType
+        }
+      }
+
       return {
         success: true,
         output: {
           pageId,
           platform: platformKey,
           loginUrl,
-          message: `Browser opened at ${loginUrl}. Page ID: ${pageId}. Credentials available for ${platformKey}. Use browserType to fill in the login form.`,
-          // Provide field hints — agent uses browserType with these
+          message: `Browser opened at ${loginUrl}. Page ID: ${pageId}. Credentials have been auto-filled. Submit the login form or use browserClick.`,
           hints: {
             usernameField: 'input[name="username"], input[type="email"], input[name="email"]',
             passwordField: 'input[name="password"], input[type="password"]',
-            username: creds.username,
           },
         },
       };
