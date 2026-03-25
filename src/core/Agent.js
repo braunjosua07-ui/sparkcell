@@ -19,6 +19,9 @@ export class Agent extends EventEmitter {
   #workDir;
   #browserManager;
   #credentialStore;
+  #smtpConfig;
+  #slackWebhook;
+  #discordWebhook;
   #customToolsDir;
   #taskQueue = [];
   #currentTask = null;
@@ -39,6 +42,9 @@ export class Agent extends EventEmitter {
     this.#toolRunner = options.toolRunner || null;
     this.#browserManager = options.browserManager || null;
     this.#credentialStore = options.credentialStore || null;
+    this.#smtpConfig = options.smtpConfig || null;
+    this.#slackWebhook = options.slackWebhook || null;
+    this.#discordWebhook = options.discordWebhook || null;
     this.#workDir = options.workDir || null;
     this.#customToolsDir = options.customToolsDir || null;
     this.#contextManager = new ContextManager({ maxTokens: 128000 });
@@ -268,6 +274,9 @@ export class Agent extends EventEmitter {
           customToolsDir: this.#customToolsDir,
           browserManager: this.#browserManager,
           credentialStore: this.#credentialStore,
+          smtpConfig: this.#smtpConfig,
+          slackWebhook: this.#slackWebhook,
+          discordWebhook: this.#discordWebhook,
           bus: this.#bus,
           toolRunner: this.#toolRunner,
         };

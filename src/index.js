@@ -179,6 +179,9 @@ export class SparkCell extends EventEmitter {
         toolRunner: this.#toolRunner,
         browserManager: this.#browserManager,
         credentialStore: this.#credentialStore,
+        smtpConfig: startupConfig.smtp || null,
+        slackWebhook: startupConfig.slackWebhook || null,
+        discordWebhook: startupConfig.discordWebhook || null,
         workDir,
         customToolsDir: path.join(workDir, 'custom-tools'),
       });

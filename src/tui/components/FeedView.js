@@ -19,6 +19,10 @@ const EVENT_ICONS = {
   'tool-permission-requested': '\u{1F512}', // 🔒
   'tool-permission-granted': '\u{1F511}',   // 🔑
   'tool-failed': '\u2718',     // ✘
+  'notification': '\u{1F514}',  // 🔔
+  'email-sent': '\u2709',      // ✉
+  'slack-sent': '\u{1F4E8}',   // 📨
+  'discord-sent': '\u{1F4E8}', // 📨
 };
 
 const EVENT_COLORS = {
@@ -38,6 +42,10 @@ const EVENT_COLORS = {
   'tool-permission-requested': 'yellow',
   'tool-permission-granted': 'green',
   'tool-failed': 'red',
+  'notification': 'yellow',
+  'email-sent': 'magenta',
+  'slack-sent': 'magenta',
+  'discord-sent': 'magenta',
 };
 
 function formatTime(ts) {
@@ -85,6 +93,14 @@ function formatEvent(entry) {
       return `Erlaubnis erteilt: ${entry.actionKey || '?'}`;
     case 'tool-failed':
       return `${name} Tool-Fehler: ${entry.toolName || '?'} — ${entry.error || ''}`;
+    case 'notification':
+      return `${name}: [${entry.priority || 'medium'}] ${entry.message || ''}`;
+    case 'email-sent':
+      return `${name} Email an ${entry.to || '?'}: ${entry.subject || ''}`;
+    case 'slack-sent':
+      return `${name} Slack: ${entry.preview || ''}`;
+    case 'discord-sent':
+      return `${name} Discord: ${entry.preview || ''}`;
     default:
       return `${name}: ${entry.type}`;
   }

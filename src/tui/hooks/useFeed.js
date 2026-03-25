@@ -28,6 +28,10 @@ export function useFeed(bus, maxEntries = 100) {
       bus.subscribe('tool:failed', addEntry('tool-failed')),
       bus.subscribe('tool:permission-requested', addEntry('tool-permission-requested')),
       bus.subscribe('tool:permission-granted', addEntry('tool-permission-granted')),
+      bus.subscribe('agent:notification', addEntry('notification')),
+      bus.subscribe('comm:email-sent', addEntry('email-sent')),
+      bus.subscribe('comm:slack-sent', addEntry('slack-sent')),
+      bus.subscribe('comm:discord-sent', addEntry('discord-sent')),
     ];
     return () => unsubs.forEach(u => u());
   }, [bus]);
