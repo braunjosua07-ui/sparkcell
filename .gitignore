@@ -1,4 +1,38 @@
+# Dependencies
 node_modules/
+
+# System files
 .DS_Store
+Thumbs.db
+
+# Logs
 *.log
+logs/
+
+# Configuration & Secrets (NIEHT HÖCHSTENS!)
 .env
+.env.local
+.env.*.local
+*.secret.json
+credentials*.json
+*.enc.json
+
+# User-specific configs
+.config/sparkcell/
+
+# Startup data (user projects)
+startup/
+startups/
+*.startup.json
+
+# Output files (user content)
+output/
+docs/website/
+
+# IDE & Editor
+.idea/
+.vscode/
+
+# Logs & Cache
+.cache/
+temp/

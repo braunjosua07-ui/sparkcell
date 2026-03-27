@@ -7,14 +7,22 @@ export function StatusBar({ sparkCell }) {
   const agentCount = status.agents?.length || 0;
   const paused = status.paused ? ' [PAUSED]' : '';
 
-  return React.createElement(Box, { borderStyle: 'single', borderColor: 'cyan', paddingX: 1 },
-    React.createElement(Text, { bold: true, color: 'cyan' }, `SparkCell`),
+  // Calculate average soul score from personality across all agents
+  const avgSoulScore = agentCount > 0
+    ? Math.round(status.agents.reduce((sum, a) => {
+        return sum + (a.personalitySoulScore || a.soulScore || 0);
+      }, 0) / agentCount)
+    : 0;
+
+  return React.createElement(Box, { borderStyle: 'double', borderColor: avgSoulScore >= 50 ? 'magenta' : 'cyan', paddingX: 1 },
+    React.createElement(Text, { bold: true, color: 'cyan' }, 'SparkCell'),
     React.createElement(Text, null, ` | `),
     React.createElement(Text, { color: 'green' }, status.startup || 'No startup'),
     React.createElement(Text, null, ` | `),
     React.createElement(Text, null, `${agentCount} agents`),
     React.createElement(Text, null, ` | `),
     React.createElement(Text, null, uptime),
+    React.createElement(Text, { color: avgSoulScore >= 70 ? 'magenta' : avgSoulScore >= 40 ? 'cyan' : 'gray' }, ` | \u2764 Soul: ${avgSoulScore}%`),
     React.createElement(Text, { color: status.paused ? 'yellow' : 'green' }, paused || ' [RUNNING]'),
     React.createElement(Box, { flexGrow: 1 }),
     React.createElement(Text, { dimColor: true }, 'Ctrl+Q quit | Ctrl+P pause | Tab chat')

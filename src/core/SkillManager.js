@@ -43,6 +43,7 @@ function xpToLevel(xp) {
 export class SkillManager {
   #agentId;
   #skills = new Map();
+  #prevSoulScore = 0;
 
   /**
    * @param {string} agentId
@@ -187,14 +188,29 @@ export class SkillManager {
    * @param {number} qualityScore - 0 to 1
    * @returns {{ needsTraining: boolean, trainingTask?: { title: string, description: string } }}
    */
-  applyFeedback(skillName, qualityScore) {
+  applyFeedback(skillName, qualityScore, { bus, agentId, agentName } = {}) {
     let entry = this.#skills.get(skillName);
     if (!entry) return { needsTraining: false };
+
+    const prevLevel = entry.level;
 
     if (qualityScore >= 0.7) {
       // Good output — bonus XP
       entry.xp += 50;
       entry.level = xpToLevel(entry.xp);
+
+      // Emit skill upgrade event if level increased
+      if (entry.level > prevLevel && bus) {
+        bus.publish('agent:skill-upgrade', {
+          agentId,
+          agentName,
+          skill: skillName,
+          level: entry.level,
+          prevLevel: prevLevel,
+          soulScore: Math.min(100, Math.round((entry.xp / 5000) * 100)),
+        });
+      }
+
       return { needsTraining: false };
     }
 
@@ -278,6 +294,47 @@ export class SkillManager {
   }
 
   get agentId() { return this.#agentId; }
+
+  /**
+   * Calculate and return the agent's "Soul Score" - a measure of personality/character.
+   * Based on memory depth and skill diversity.
+   * @param {{ total?: number, hot?: number }} memoryStats - Agent memory stats
+   * @returns {number} Soul score 0-100
+   */
+  getSoulScore(memoryStats = {}) {
+    const memoryDepth = memoryStats.total || 0;
+    const skillsCount = this.#skills.size;
+
+    // Memory contributes up to 50 points
+    const memoryScore = Math.min(50, memoryDepth);
+
+    // Skills contribute up to 50 points based on diversity
+    const skillScore = Math.min(50, skillsCount * 5 + skillsCount);
+
+    return Math.min(100, Math.round(memoryScore + skillScore));
+  }
+
+  /**
+   * Emit soul evolution event if score changed significantly.
+   * @param {number} newSoulScore - Current soul score
+   * @param {{ bus: any, agentId: string, agentName: string }} ctx - Bus context
+   */
+  emitSoulEvent(newSoulScore, ctx) {
+    // Store previous score in memory if possible
+    if (!this.#prevSoulScore) this.#prevSoulScore = 0;
+
+    const diff = newSoulScore - this.#prevSoulScore;
+    if (diff >= 10 || (this.#prevSoulScore < 70 && newSoulScore >= 70)) {
+      ctx.bus.publish('agent:soul-evolution', {
+        agentId: ctx.agentId,
+        agentName: ctx.agentName,
+        soulScore: newSoulScore,
+        milestone: newSoulScore >= 70 ? 'SOUL-CHARGE' : newSoulScore >= 40 ? 'Soul gestärkt' : 'Soul entstanden',
+      });
+    }
+
+    this.#prevSoulScore = newSoulScore;
+  }
 
   static teamMatrix(skillManagers) {
     const skillSet = new Set();

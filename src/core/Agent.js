@@ -10,6 +10,7 @@ import { ContextManager } from '../tools/ContextManager.js';
 import { ProtectionSystem } from './ProtectionSystem.js';
 import { ProtectionStorage } from './ProtectionStorage.js';
 import { AgentMessageBus, MESSAGE_TYPE } from './AgentMessageBus.js';
+import { Personality } from './Personality.js';
 import { metrics } from './Metrics.js';
 
 export class Agent extends EventEmitter {
@@ -27,6 +28,7 @@ export class Agent extends EventEmitter {
   #slackWebhook;
   #discordWebhook;
   #customToolsDir;
+  #personality;
   #taskQueue = [];
   #completedTaskCount = 0;
   #currentTask = null;
@@ -39,6 +41,7 @@ export class Agent extends EventEmitter {
   #protectionStorage;
   #metrics = metrics;
   #prevSkillLevels = new Map();
+  #prevPersonalityScore = 0;
   #blockedCycles = 0;
 
   constructor(id, options = {}) {
@@ -60,6 +63,15 @@ export class Agent extends EventEmitter {
     this.#workDir = options.workDir || null;
     this.#customToolsDir = options.customToolsDir || null;
     this.#contextManager = new ContextManager({ maxTokens: 128000 });
+
+    // Initialize Personality
+    const personalityTemplate = this.role === 'ceo' ? 'ceo' :
+                                  this.role === 'tech' ? 'tech' :
+                                  this.role === 'product' ? 'product' :
+                                  this.role === 'design' ? 'design' :
+                                  this.role === 'marketing' ? 'marketing' : 'generalist';
+    this.#personality = new Personality(this.id, options.personality || {}, personalityTemplate);
+    this.#prevPersonalityScore = this.#personality.getSoulScore();
 
     this.stateMachine = new StateMachine(id);
     this.energy = new EnergyManager(id, options.energyConfig);
@@ -506,7 +518,11 @@ export class Agent extends EventEmitter {
 
     if (matchedSkill) {
       const { score, reasons } = this.skills.evaluateQuality(content, matchedSkill);
-      const feedback = this.skills.applyFeedback(matchedSkill, score);
+      const feedback = this.skills.applyFeedback(matchedSkill, score, {
+        bus: this.#bus,
+        agentId: this.id,
+        agentName: this.name,
+      });
 
       if (this.#bus) {
         this.#bus.publish('agent:skill-evaluation', {
@@ -517,6 +533,33 @@ export class Agent extends EventEmitter {
           reasons,
           needsTraining: feedback.needsTraining,
         });
+      }
+
+      // Emit soul evolution event periodically
+      const memoryStats = this.memory.getStats();
+      const soulScore = this.skills.getSoulScore(memoryStats);
+      this.skills.emitSoulEvent(soulScore, {
+        bus: this.#bus,
+        agentId: this.id,
+        agentName: this.name,
+      });
+
+      // Apply quality-based personality adjustments
+      const personalityChanges = this.#personality.adjustFromQuality(score, matchedSkill);
+      const currentSoulScore = this.#personality.getSoulScore();
+
+      // Emit soul evolution event for personality changes
+      if (Object.keys(personalityChanges).length > 0 || currentSoulScore !== this.#prevPersonalityScore) {
+        if (this.#bus) {
+          this.#bus.publish('agent:soul-evolution', {
+            agentId: this.id,
+            agentName: this.name,
+            changes: personalityChanges,
+            oldSoulScore: this.#prevPersonalityScore,
+            newSoulScore: currentSoulScore,
+          });
+        }
+        this.#prevPersonalityScore = currentSoulScore;
       }
 
       if (feedback.needsTraining && feedback.trainingTask) {
@@ -539,6 +582,12 @@ export class Agent extends EventEmitter {
     const context = this.#startupDescription
       ? `Du arbeitest als ${this.name} (${this.role}) in einem Startup: "${this.#startupDescription}".`
       : `Du bist ${this.name}, ein ${this.role} in einem Startup-Team.`;
+
+    // Personality context — inject Big Five traits and character attributes
+    const personalityString = this.#personality.getPromptString();
+    const personalityContext = personalityString
+      ? `\n\n${personalityString}`
+      : '';
 
     // Check memory for previous work
     const recentWork = this.memory.search('work').slice(-3);
@@ -576,6 +625,7 @@ export class Agent extends EventEmitter {
 
     const systemPrompt = [
       context,
+      personalityContext,
       'Du erledigst Aufgaben gründlich und lieferst konkreten Output. Antworte auf Deutsch.',
       'Koordiniere dich mit deinem Team. Beziehe dich auf die Arbeit deiner Kollegen.',
       'Wenn du auf ein Problem stößt das du nicht alleine lösen kannst, melde es mit: [BLOCKER: Beschreibung]',
@@ -705,6 +755,10 @@ export class Agent extends EventEmitter {
   }
 
   getStatus() {
+    const memoryStats = this.memory?.getStats?.() || { total: 0 };
+    const soulScore = this.skills?.getSoulScore?.(memoryStats) || 0;
+    const personalitySoulScore = this.#personality?.getSoulScore?.() || 0;
+
     return {
       id: this.id,
       name: this.name,
@@ -714,6 +768,11 @@ export class Agent extends EventEmitter {
       currentTask: this.#currentTask,
       queueLength: this.#taskQueue.length,
       cycleCount: this.#cycleCount,
+      soulScore,
+      personalitySoulScore,
+      personality: this.#personality?.getDescription?.(),
+      personalityTraits: this.#personality?.traits,
+      memoryStats,
       metrics: this.getMetrics(),
     };
   }
@@ -730,6 +789,23 @@ export class Agent extends EventEmitter {
     };
   }
 
-  async save() { await this.energy.save(); }
-  async load() { await this.energy.load(); }
+  async save() {
+    await this.energy.save();
+    const personalityPath = path.join(this.#workDir || this.#outputDir || '.', `${this.id}-personality.json`);
+    await fs.writeFile(personalityPath, JSON.stringify(this.#personality.traits, null, 2));
+  }
+
+  async load() {
+    await this.energy.load();
+    const personalityPath = path.join(this.#workDir || this.#outputDir || '.', `${this.id}-personality.json`);
+    try {
+      const data = await fs.readFile(personalityPath, 'utf8');
+      const loadedTraits = JSON.parse(data);
+      // Merge loaded traits with existing personality
+      this.#personality.setTraits(loadedTraits);
+      this.#prevPersonalityScore = this.#personality.getSoulScore();
+    } catch {
+      // No saved personality — use default
+    }
+  }
 }

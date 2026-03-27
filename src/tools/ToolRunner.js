@@ -1,7 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
+import vm from 'node:vm';
+import crypto from 'node:crypto';
 import { ToolPermissions } from './ToolPermissions.js';
 import { ToolValidator } from './ToolValidator.js';
+
+const USER_TOOLS_DIR = path.join(os.homedir(), '.config', 'sparkcell', 'tools');
 
 export class ToolRunner {
   #tools = new Map();
@@ -54,6 +59,111 @@ export class ToolRunner {
         if (this.#logger) this.#logger.warn(`Failed to load tool from ${entry}: ${err.message}`);
       }
     }
+  }
+
+  /**
+   * Load JSON-based tools from user tools directory
+   */
+  async loadUserTools() {
+    try {
+      const entries = await fs.readdir(USER_TOOLS_DIR);
+      const toolFiles = entries.filter(f => f.endsWith('.tool.json'));
+
+      for (const toolFile of toolFiles) {
+        try {
+          const toolPath = path.join(USER_TOOLS_DIR, toolFile);
+          const data = JSON.parse(await fs.readFile(toolPath, 'utf8'));
+
+          // Skip disabled tools
+          if (data.enabled === false) continue;
+
+          // Create sandboxed tool from JSON manifest
+          const tool = this.#createJsonTool(data);
+          this.registerTool(tool);
+          if (this.#logger) this.#logger.info(`Loaded user tool: ${data.name}`);
+        } catch (err) {
+          if (this.#logger) this.#logger.warn(`Failed to load user tool ${toolFile}: ${err.message}`);
+        }
+      }
+    } catch {
+      // Directory doesn't exist - that's ok
+    }
+  }
+
+  /**
+   * Create a tool from JSON manifest (user-installed tools)
+   */
+  #createJsonTool(manifest) {
+    const failureCount = { value: 0 };
+    let disabled = false;
+
+    return {
+      name: manifest.name,
+      description: manifest.description,
+      parameters: manifest.parameters,
+      permissionLevel: manifest.permissionLevel || 'auto',
+      isCustom: true,
+
+      async execute(args, context) {
+        if (disabled) {
+          return { success: false, output: null, error: `Tool "${manifest.name}" is disabled` };
+        }
+
+        // Build sandbox with limited capabilities
+        const sandbox = {
+          args,
+          result: null,
+          error: null,
+          console: {
+            log: (...a) => context.logger?.info(`[${manifest.name}]`, ...a),
+            warn: (...a) => context.logger?.warn(`[${manifest.name}]`, ...a),
+            error: (...a) => context.logger?.error(`[${manifest.name}]`, ...a),
+          },
+          JSON, Math, Date, Array, Object, String, Number, Boolean,
+          crypto, fetch: globalThis.fetch,
+          agentId: context.agentId,
+          workDir: context.workDir,
+        };
+
+        const vmContext = vm.createContext(sandbox);
+
+        const wrappedCode = `
+          (async () => {
+            try {
+              const execute = async (args, context) => { ${manifest.code} };
+              result = await execute(args, { agentId, workDir });
+            } catch (e) {
+              error = e.message || String(e);
+            }
+          })();
+        `;
+
+        try {
+          const script = new vm.Script(wrappedCode, { filename: `user-tool-${manifest.name}.js` });
+          await script.runInContext(vmContext, { timeout: 10000 });
+
+          if (sandbox.error) {
+            failureCount.value++;
+            if (failureCount.value >= 3) disabled = true;
+            return { success: false, output: null, error: sandbox.error };
+          }
+
+          const r = sandbox.result;
+          if (!r || typeof r !== 'object' || typeof r.success !== 'boolean') {
+            failureCount.value++;
+            if (failureCount.value >= 3) disabled = true;
+            return { success: false, output: null, error: 'Tool must return { success: boolean, output: any }' };
+          }
+
+          failureCount.value = 0;
+          return r;
+        } catch (err) {
+          failureCount.value++;
+          if (failureCount.value >= 3) disabled = true;
+          return { success: false, output: null, error: `Sandbox error: ${err.message}` };
+        }
+      },
+    };
   }
 
   getToolDefinitions(format = 'openai') {

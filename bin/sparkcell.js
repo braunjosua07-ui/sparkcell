@@ -9,6 +9,7 @@ import { StartupSelector } from '../src/wizard/StartupSelector.js';
 import paths from '../src/utils/paths.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { listTools, installTool, removeTool, enableTool, disableTool } from '../src/cli/tools.js';
 
 program
   .name('sparkcell')
@@ -131,6 +132,36 @@ program
   });
 
 program
+  .command('tool [action] [name]')
+  .description('Manage tools (install, list, remove, enable, disable)')
+  .action(async (action, name) => {
+    const { info, warn } = await import('../src/cli/prompt.js');
+    if (!action || action === 'list') {
+      await listTools();
+      return;
+    }
+    switch (action) {
+      case 'install':
+      case 'add':
+        await installTool(name);
+        break;
+      case 'remove':
+      case 'uninstall':
+        await removeTool(name);
+        break;
+      case 'enable':
+        await enableTool(name);
+        break;
+      case 'disable':
+        await disableTool(name);
+        break;
+      default:
+        warn(`Unbekannte Aktion: ${action}`);
+        info('Verfügbare Aktionen: list, install, remove, enable, disable');
+    }
+  });
+
+program
   .command('export [name]')
   .description('Export startup documents')
   .action(async (name) => {
@@ -166,6 +197,7 @@ program.action(async () => {
     info('  sparkcell config         Einstellungen zeigen');
     info('  sparkcell doctor         System-Check');
     info('  sparkcell setup          Setup-Wizard');
+    info('  sparkcell tool [action]  Tools verwalten');
     console.log();
   }
 });

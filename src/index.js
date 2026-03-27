@@ -157,6 +157,9 @@ export class SparkCell extends EventEmitter {
     const customToolsDir = path.join(startupDir, 'custom-tools');
     await this.#loadCustomTools(customToolsDir);
 
+    // Load user tools from ~/.config/sparkcell/tools/
+    await this.#toolRunner.loadUserTools();
+
     // Load saved permissions
     const permissionsPath = path.join(startupDir, 'permissions-state.json');
     await this.#errorHandler.safeAsync(
