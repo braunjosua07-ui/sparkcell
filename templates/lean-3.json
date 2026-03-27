@@ -1,0 +1,9 @@
+{
+  "name": "Lean Startup",
+  "description": "Minimal team for early-stage validation",
+  "agents": [
+    { "id": "ceo", "name": "CEO", "role": "strategic-lead", "skills": ["strategy", "vision", "planning"] },
+    { "id": "tech", "name": "Tech Lead", "role": "implementer", "skills": ["coding", "architecture", "api-design"] },
+    { "id": "product", "name": "Product", "role": "analyst", "skills": ["research", "analysis", "user-stories"] }
+  ]
+}

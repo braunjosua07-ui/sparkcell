@@ -1,36 +1,38 @@
-# Sensible Dateien
-.env
-.env.local
-.env.*.local
-*.key
-
-# Konfiguration mit Keys
-config*.json
-*.config.yaml
-*.config.json
-
-# Logs und Output
-logs/
-output/
-*.backup
-*.old
-
-# Node
+# Dependencies
 node_modules/
-package-lock.json
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
+# System files
 .DS_Store
 Thumbs.db
 
-# Session files
-.current-session
-.heartbeat
-.autonomous-progress.json
+# Logs
+*.log
+logs/
+
+# Configuration & Secrets (NIEMALS!)
+.env
+.env.local
+.env.*.local
+*.secret.json
+credentials*.json
+*.enc.json
+
+# User-specific configs
+.config/sparkcell/
+
+# Startup data (user projects)
+startup/
+startups/
+*.startup.json
+
+# Output files (user content)
+output/
+docs/website/
+
+# IDE & Editor
+.idea/
+.vscode/
+
+# Logs & Cache
+.cache/
+temp/
