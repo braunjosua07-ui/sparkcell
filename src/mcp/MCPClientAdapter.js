@@ -10,6 +10,9 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { ListToolsResultSchema, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
 const MAX_CONSECUTIVE_FAILURES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 60000;
+const CIRCUIT_STATES = { CLOSED: 'CLOSED', OPEN: 'OPEN', HALF_OPEN: 'HALF_OPEN' };
 
 export class MCPClientAdapter {
   #client;
@@ -21,6 +24,10 @@ export class MCPClientAdapter {
   #logger;
   #consecutiveFailures = 0;
   #bus;
+  #circuitState = CIRCUIT_STATES.CLOSED;
+  #backoffMs = INITIAL_BACKOFF_MS;
+  #nextRetryAt = 0;
+  #reconnectTimer = null;
 
   constructor(serverName, config, logger = null, bus = null) {
     this.#serverName = serverName;
@@ -125,6 +132,16 @@ export class MCPClientAdapter {
       return { success: false, output: null, error: `MCP server "${this.#serverName}" not connected` };
     }
 
+    // Circuit breaker: reject immediately when OPEN
+    if (this.#circuitState === CIRCUIT_STATES.OPEN) {
+      if (Date.now() < this.#nextRetryAt) {
+        return { success: false, output: null, error: `MCP server "${this.#serverName}" circuit open — retry after backoff` };
+      }
+      // Cooldown expired → try half-open
+      this.#circuitState = CIRCUIT_STATES.HALF_OPEN;
+      this.#log('info', `MCP server "${this.#serverName}" circuit half-open — testing recovery`);
+    }
+
     try {
       const result = await this.#client.request(
         {
@@ -134,8 +151,8 @@ export class MCPClientAdapter {
         CallToolResultSchema,
       );
 
-      // Success — reset failure counter
-      this.#consecutiveFailures = 0;
+      // Success — reset circuit breaker
+      this.#onSuccess();
 
       // MCP returns content as array of {type, text/data} objects
       const output = (result.content || [])
@@ -154,28 +171,48 @@ export class MCPClientAdapter {
         error: isError ? output : null,
       };
     } catch (err) {
-      this.#consecutiveFailures++;
-      this.#log('warn', `MCP tool "${toolName}" failed on "${this.#serverName}" (${this.#consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${err.message}`);
+      this.#onFailure(err);
+      return { success: false, output: null, error: `MCP tool error (${toolName}): ${err.message}` };
+    }
+  }
 
-      // Auto-disconnect after too many consecutive failures
-      if (this.#consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        this.#log('warn', `MCP server "${this.#serverName}" marked unhealthy after ${MAX_CONSECUTIVE_FAILURES} consecutive failures — disconnecting`);
-        this.#connected = false;
-        if (this.#bus) {
-          this.#bus.publish('mcp:server-unhealthy', {
-            server: this.#serverName,
-            failures: this.#consecutiveFailures,
-            lastError: err.message,
-          });
-        }
+  #onSuccess() {
+    this.#consecutiveFailures = 0;
+    if (this.#circuitState !== CIRCUIT_STATES.CLOSED) {
+      this.#log('info', `MCP server "${this.#serverName}" circuit closed — recovered`);
+      this.#circuitState = CIRCUIT_STATES.CLOSED;
+      this.#backoffMs = INITIAL_BACKOFF_MS;
+    }
+  }
+
+  #onFailure(err) {
+    this.#consecutiveFailures++;
+    this.#log('warn', `MCP tool failed on "${this.#serverName}" (${this.#consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${err.message}`);
+
+    if (this.#consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+      this.#circuitState = CIRCUIT_STATES.OPEN;
+      this.#nextRetryAt = Date.now() + this.#backoffMs;
+      this.#log('warn', `MCP server "${this.#serverName}" circuit open — backoff ${this.#backoffMs}ms`);
+
+      if (this.#bus) {
+        this.#bus.publish('mcp:server-unhealthy', {
+          server: this.#serverName,
+          failures: this.#consecutiveFailures,
+          lastError: err.message,
+          backoffMs: this.#backoffMs,
+          nextRetryAt: this.#nextRetryAt,
+        });
       }
 
-      return { success: false, output: null, error: `MCP tool error (${toolName}): ${err.message}` };
+      // Exponential backoff for next trip
+      this.#backoffMs = Math.min(this.#backoffMs * 2, MAX_BACKOFF_MS);
     }
   }
 
   async disconnect() {
     if (!this.#connected) return;
+    clearTimeout(this.#reconnectTimer);
+    this.#reconnectTimer = null;
     try {
       await this.#transport.close();
     } catch {
@@ -183,6 +220,9 @@ export class MCPClientAdapter {
     }
     this.#connected = false;
     this.#tools = [];
+    this.#circuitState = CIRCUIT_STATES.CLOSED;
+    this.#consecutiveFailures = 0;
+    this.#backoffMs = INITIAL_BACKOFF_MS;
     this.#log('info', `Disconnected from MCP server: ${this.#serverName}`);
   }
 
@@ -190,7 +230,9 @@ export class MCPClientAdapter {
     return {
       name: this.#serverName,
       connected: this.#connected,
+      circuitState: this.#circuitState,
       consecutiveFailures: this.#consecutiveFailures,
+      backoffMs: this.#backoffMs,
       tools: this.#tools.map(t => t.mcpToolName),
     };
   }

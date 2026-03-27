@@ -22,6 +22,7 @@ export function ChatView({ sparkCell }) {
   ]);
   const entries = useFeed(sparkCell?.bus, 20);
   const subscribedRef = useRef(false);
+  const [maskedInput, setMaskedInput] = useState(null); // { platform } when active
 
   const addMessage = useCallback((msg) => {
     setMessages(prev => {
@@ -59,6 +60,11 @@ export function ChatView({ sparkCell }) {
       });
     });
 
+    // Masked input mode for credential entry
+    sparkCell.bus.subscribe('credential:input-requested', (data) => {
+      setMaskedInput({ platform: data.platform });
+    });
+
     // Show permission requests
     sparkCell.bus.subscribe('tool:permission-requested', (data) => {
       const agent = data.agentName || data.agentId || '?';
@@ -77,6 +83,24 @@ export function ChatView({ sparkCell }) {
   const handleSubmit = useCallback((value) => {
     if (!value.trim()) return;
     setInput('');
+
+    // Masked input mode: store credentials instead of normal processing
+    if (maskedInput) {
+      const { platform } = maskedInput;
+      setMaskedInput(null);
+      const [username, ...rest] = value.trim().split(':');
+      const password = rest.join(':');
+      if (!username || !password) {
+        addMessage({ type: 'error', text: 'Format: username:password' });
+        return;
+      }
+      sparkCell.credentialStore.store(platform, { username, password }).then(() => {
+        addMessage({ type: 'success', text: `Credentials fuer "${platform}" gespeichert.` });
+      }).catch(err => {
+        addMessage({ type: 'error', text: `Fehler: ${err.message}` });
+      });
+      return;
+    }
 
     const text = value.trim();
     addMessage({ type: 'user', text });
@@ -164,7 +188,8 @@ export function ChatView({ sparkCell }) {
         value: input,
         onChange: setInput,
         onSubmit: handleSubmit,
-        placeholder: '@agent Nachricht oder /befehl...',
+        placeholder: maskedInput ? 'username:password (maskiert)' : '@agent Nachricht oder /befehl...',
+        mask: maskedInput ? '*' : undefined,
       }),
     ),
   );

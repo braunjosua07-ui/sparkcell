@@ -41,6 +41,24 @@ describe('ToolRunner — Registration', () => {
     runner.registerTool(makeTool({ name: 'otherTool' }));
     assert.deepEqual(runner.getToolNames(), ['testTool', 'otherTool']);
   });
+
+  it('deregisters a tool by name', () => {
+    runner.registerTool(makeTool());
+    assert.ok(runner.hasTool('testTool'));
+    assert.equal(runner.deregisterTool('testTool'), true);
+    assert.equal(runner.hasTool('testTool'), false);
+  });
+
+  it('deregisterTool returns false for unknown tool', () => {
+    assert.equal(runner.deregisterTool('nonexistent'), false);
+  });
+
+  it('allows re-registration after deregister', () => {
+    runner.registerTool(makeTool());
+    runner.deregisterTool('testTool');
+    runner.registerTool(makeTool());
+    assert.ok(runner.hasTool('testTool'));
+  });
 });
 
 describe('ToolRunner — getToolDefinitions', () => {

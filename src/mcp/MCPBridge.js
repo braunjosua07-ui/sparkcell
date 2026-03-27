@@ -21,6 +21,7 @@ import { MCPClientAdapter } from './MCPClientAdapter.js';
 
 export class MCPBridge {
   #adapters = new Map();
+  #serverTools = new Map(); // server name → Set of tool names
   #toolRunner;
   #logger;
   #bus;
@@ -79,14 +80,17 @@ export class MCPBridge {
 
     // Register each MCP tool in ToolRunner
     let registered = 0;
+    const toolNames = new Set();
     for (const tool of tools) {
       try {
         this.#toolRunner.registerTool(tool);
+        toolNames.add(tool.name);
         registered++;
       } catch (err) {
         this.#log('warn', `Failed to register MCP tool "${tool.name}": ${err.message}`);
       }
     }
+    this.#serverTools.set(name, toolNames);
 
     if (this.#bus) {
       this.#bus.publish('mcp:server-connected', {
@@ -115,6 +119,15 @@ export class MCPBridge {
   async removeServer(name) {
     const adapter = this.#adapters.get(name);
     if (!adapter) return false;
+
+    // Deregister all tools from this server
+    const toolNames = this.#serverTools.get(name);
+    if (toolNames) {
+      for (const toolName of toolNames) {
+        this.#toolRunner.deregisterTool(toolName);
+      }
+      this.#serverTools.delete(name);
+    }
 
     await adapter.disconnect();
     this.#adapters.delete(name);

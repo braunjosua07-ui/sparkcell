@@ -33,4 +33,47 @@ describe('AgentMemory', () => {
     const mem = new AgentMemory('agent-1');
     assert.equal(mem.recall('nonexistent'), null);
   });
+
+  it('evicts COLD entries when store exceeds maxEntries', () => {
+    const mem = new AgentMemory('agent-1', { maxEntries: 10 });
+
+    // Fill with 10 entries (at limit, no eviction yet)
+    for (let i = 0; i < 10; i++) {
+      mem.store(`old-${i}`, `value-${i}`);
+    }
+    assert.equal(mem.getStats().total, 10);
+
+    // Make a few entries HOT by accessing them
+    mem.recall('old-8');
+    mem.recall('old-8');
+    mem.recall('old-8');
+    mem.recall('old-8');
+    mem.recall('old-8');
+    mem.recall('old-8'); // accessCount > 5 → HOT
+    mem.recall('old-9');
+    mem.recall('old-9');
+    mem.recall('old-9');
+    mem.recall('old-9');
+    mem.recall('old-9');
+    mem.recall('old-9'); // accessCount > 5 → HOT
+
+    // Add one more entry to trigger eviction
+    mem.store('new-entry', 'trigger eviction');
+
+    const stats = mem.getStats();
+    // Should have evicted COLD entries, kept HOT ones
+    assert.ok(stats.total <= 10, `expected <= 10 entries, got ${stats.total}`);
+    // HOT entries must survive
+    assert.ok(mem.recall('old-8') !== null, 'HOT entry old-8 should survive eviction');
+    assert.ok(mem.recall('old-9') !== null, 'HOT entry old-9 should survive eviction');
+    assert.ok(mem.recall('new-entry') !== null, 'newly added entry should survive');
+  });
+
+  it('respects custom maxEntries', () => {
+    const mem = new AgentMemory('agent-1', { maxEntries: 5 });
+    for (let i = 0; i < 8; i++) {
+      mem.store(`key-${i}`, `val-${i}`);
+    }
+    assert.ok(mem.getStats().total <= 5, 'should not exceed maxEntries');
+  });
 });

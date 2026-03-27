@@ -32,6 +32,10 @@ export function useFeed(bus, maxEntries = 100) {
       bus.subscribe('comm:email-sent', addEntry('email-sent')),
       bus.subscribe('comm:slack-sent', addEntry('slack-sent')),
       bus.subscribe('comm:discord-sent', addEntry('discord-sent')),
+      bus.subscribe('mcp:server-connected', addEntry('mcp-server-connected')),
+      bus.subscribe('credential:input-requested', addEntry('credential-input-requested')),
+      bus.subscribe('agent:protection-violation', addEntry('protection-violation')),
+      bus.subscribe('agent:token', addEntry('token')),
     ];
     return () => unsubs.forEach(u => u());
   }, [bus]);

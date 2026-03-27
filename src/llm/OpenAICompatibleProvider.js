@@ -59,6 +59,63 @@ export class OpenAICompatibleProvider {
     return { content, toolCalls, usage: data.usage || {}, model: data.model };
   }
 
+  async *queryStream(prompt, options = {}) {
+    const body = this._buildRequestBody(prompt, options);
+    body.stream = true;
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.#apiKey) headers['Authorization'] = `Bearer ${this.#apiKey}`;
+    this.#stats.totalRequests++;
+
+    const response = await fetch(`${this.#baseUrl}/chat/completions`, {
+      method: 'POST', headers, body: JSON.stringify(body), signal: options.signal,
+    });
+    if (!response.ok) {
+      this.#stats.totalErrors++;
+      throw new Error(`LLM stream failed: ${response.status} ${response.statusText}`);
+    }
+
+    let fullContent = '';
+    const toolCalls = [];
+    for await (const chunk of this.#parseSSE(response.body)) {
+      if (chunk === '[DONE]') break;
+      const data = JSON.parse(chunk);
+      const delta = data.choices?.[0]?.delta;
+      if (!delta) continue;
+      if (delta.content) {
+        fullContent += delta.content;
+        yield { type: 'token', text: delta.content };
+      }
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          if (!toolCalls[tc.index]) toolCalls[tc.index] = { id: '', name: '', args: '' };
+          if (tc.id) toolCalls[tc.index].id = tc.id;
+          if (tc.function?.name) toolCalls[tc.index].name = tc.function.name;
+          if (tc.function?.arguments) toolCalls[tc.index].args += tc.function.arguments;
+        }
+      }
+      if (data.usage) this.#stats.totalTokens += (data.usage.total_tokens || 0);
+    }
+    const parsed = toolCalls.map(tc => ({
+      id: tc.id, name: tc.name,
+      args: tc.args ? JSON.parse(tc.args) : {},
+    }));
+    yield { type: 'done', content: fullContent, toolCalls: parsed };
+  }
+
+  async *#parseSSE(body) {
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for await (const chunk of body) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ')) yield line.slice(6);
+      }
+    }
+    if (buffer.startsWith('data: ')) yield buffer.slice(6);
+  }
+
   async listModels() {
     const headers = {};
     if (this.#apiKey) headers['Authorization'] = `Bearer ${this.#apiKey}`;

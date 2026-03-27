@@ -3,6 +3,10 @@ import { AnthropicProvider } from './AnthropicProvider.js';
 import { getProvider } from './ProviderRegistry.js';
 import { injectToolsAsText, parseToolCallsFromText } from './ToolUseFallback.js';
 
+const CB_BASE_COOLDOWN = 5_000;   // 5 seconds
+const CB_MAX_COOLDOWN  = 120_000; // 2 minutes
+const CB_FAILURE_THRESHOLD = 3;
+
 export class LLMManager {
   #providers = new Map();
   _circuitBreakers = new Map(); // public for tests
@@ -78,10 +82,39 @@ export class LLMManager {
     throw new Error('All LLM providers unavailable (circuit breakers open)');
   }
 
+  async *queryStream(prompt, options = {}) {
+    for (const name of this.#providerOrder) {
+      if (this._isCircuitOpen(name)) continue;
+      try {
+        const provider = this.#providers.get(name);
+        if (typeof provider.queryStream !== 'function') {
+          // Fallback to non-streaming query
+          const result = await provider.query(prompt, options);
+          if (!result.toolCalls) result.toolCalls = [];
+          yield { type: 'token', text: result.content };
+          yield { type: 'done', ...result };
+          this._recordSuccess(name);
+          return;
+        }
+        for await (const chunk of provider.queryStream(prompt, options)) {
+          yield chunk;
+        }
+        this._recordSuccess(name);
+        return;
+      } catch (error) {
+        this._recordFailure(name);
+        if (name === this.#providerOrder[this.#providerOrder.length - 1]) {
+          throw error;
+        }
+      }
+    }
+    throw new Error('All LLM providers unavailable (circuit breakers open)');
+  }
+
   _recordFailure(name) {
-    const cb = this._circuitBreakers.get(name) || { failures: 0, openedAt: null };
+    const cb = this._circuitBreakers.get(name) || { failures: 0, openedAt: null, attempt: 0 };
     cb.failures++;
-    if (cb.failures >= 3) cb.openedAt = Date.now();
+    if (cb.failures >= CB_FAILURE_THRESHOLD) cb.openedAt = Date.now();
     this._circuitBreakers.set(name, cb);
   }
 
@@ -91,11 +124,13 @@ export class LLMManager {
 
   _isCircuitOpen(name) {
     const cb = this._circuitBreakers.get(name);
-    if (!cb || cb.failures < 3) return false;
-    // Cooldown: 30 seconds
-    if (Date.now() - cb.openedAt > 30000) {
+    if (!cb || cb.failures < CB_FAILURE_THRESHOLD) return false;
+    const cooldown = Math.min(CB_BASE_COOLDOWN * 2 ** cb.attempt, CB_MAX_COOLDOWN);
+    if (Date.now() - cb.openedAt > cooldown) {
+      // Half-open: allow retry, escalate backoff for next failure cycle
       cb.failures = 0;
       cb.openedAt = null;
+      cb.attempt++;
       return false;
     }
     return true;

@@ -10,6 +10,32 @@ import { PauseRoomView } from './components/PauseRoomView.js';
 import { ChatView } from './components/ChatView.js';
 import { ToolsView } from './components/ToolsView.js';
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    if (this.props.onError) this.props.onError(error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return React.createElement(Box, { flexDirection: 'column', padding: 1 },
+        React.createElement(Text, { color: 'red', bold: true }, 'Fehler in der Anzeige'),
+        React.createElement(Text, { color: 'red' }, this.state.error.message),
+        React.createElement(Text, { dimColor: true }, 'Wechsle den Tab oder starte neu (Ctrl+Q).'),
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const TABS = ['Feed', 'Chat', 'Agents', 'Tasks', 'Skills', 'Pause', 'Tools'];
 
 export function App({ sparkCell }) {
@@ -41,7 +67,7 @@ export function App({ sparkCell }) {
     React.createElement(Box, { flexGrow: 1, flexDirection: 'column' },
       React.createElement(TabBar, { tabs: TABS, active: activeTab, onSelect: setActiveTab }),
       React.createElement(Box, { flexGrow: 1, padding: 1 },
-        views[activeTab] || null,
+        React.createElement(ErrorBoundary, { key: activeTab }, views[activeTab] || null),
       ),
     ),
     React.createElement(Box, { paddingX: 1, borderStyle: 'single', borderColor: 'gray' },

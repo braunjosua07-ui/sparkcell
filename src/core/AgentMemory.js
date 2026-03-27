@@ -12,12 +12,17 @@ function classify(entry) {
   return 'COLD';
 }
 
+const DEFAULT_MAX_ENTRIES = 500;
+const EVICTION_HEADROOM = 0.9; // evict down to 90% of maxEntries
+
 export class AgentMemory {
   #agentId;
   #store = new Map();
+  #maxEntries;
 
-  constructor(agentId) {
+  constructor(agentId, { maxEntries = DEFAULT_MAX_ENTRIES } = {}) {
     this.#agentId = agentId;
+    this.#maxEntries = maxEntries;
   }
 
   /**
@@ -36,6 +41,10 @@ export class AgentMemory {
       lastAccess:  existing ? existing.lastAccess  : now,
       createdAt:   existing ? existing.createdAt   : now,
     });
+
+    if (this.#store.size > this.#maxEntries) {
+      this.#evict();
+    }
   }
 
   /**
@@ -75,6 +84,35 @@ export class AgentMemory {
 
     results.sort((a, b) => b.score - a.score);
     return results;
+  }
+
+  /**
+   * Evict lowest-value entries when store exceeds maxEntries.
+   * Removes COLD first (oldest first), then WARM if still over limit.
+   */
+  #evict() {
+    const target = Math.floor(this.#maxEntries * EVICTION_HEADROOM);
+    if (this.#store.size <= target) return;
+
+    // Score each entry: lower = more evictable
+    // COLD=0, WARM=1, HOT=2; within tier, lower accessCount and older lastAccess = evict first
+    const scored = [];
+    for (const [key, entry] of this.#store) {
+      const tier = classify(entry);
+      const tierScore = tier === 'COLD' ? 0 : tier === 'WARM' ? 1 : 2;
+      scored.push({ key, tierScore, accessCount: entry.accessCount, lastAccess: entry.lastAccess });
+    }
+
+    scored.sort((a, b) =>
+      a.tierScore - b.tierScore
+      || a.accessCount - b.accessCount
+      || a.lastAccess - b.lastAccess
+    );
+
+    for (const { key } of scored) {
+      if (this.#store.size <= target) break;
+      this.#store.delete(key);
+    }
   }
 
   /**

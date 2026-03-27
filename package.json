@@ -10,7 +10,12 @@
   "scripts": {
     "start": "node bin/sparkcell.js",
     "test": "node --test test/**/*.test.js",
-    "test:watch": "node --test --watch test/**/*.test.js"
+    "test:watch": "node --test --watch test/**/*.test.js",
+    "test:unit": "node --test test/core/*.test.js test/tools/*.test.js test/mcp/*.test.js",
+    "test:integration": "node --test test/integration/*.test.js",
+    "test:wizard": "node --test test/wizard/*.test.js",
+    "test:tui": "node --test test/tui/*.test.js",
+    "test:coverage": "c8 node --test test/**/*.test.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
@@ -26,7 +31,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "jsdom": "^29.0.1"
   },
   "engines": {
     "node": ">=18.0.0"

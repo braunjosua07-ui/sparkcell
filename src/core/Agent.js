@@ -7,6 +7,9 @@ import { SkillManager } from './SkillManager.js';
 import { AgentMemory } from './AgentMemory.js';
 import { TaskGenerator } from './TaskGenerator.js';
 import { ContextManager } from '../tools/ContextManager.js';
+import { ProtectionSystem } from './ProtectionSystem.js';
+import { ProtectionStorage } from './ProtectionStorage.js';
+import { AgentMessageBus, MESSAGE_TYPE } from './AgentMessageBus.js';
 
 export class Agent extends EventEmitter {
   #bus;
@@ -30,6 +33,11 @@ export class Agent extends EventEmitter {
   #working = false; // prevent overlapping LLM calls
   #peerOutputs = []; // last N outputs from other agents
   #busSubscriptions = []; // track subscriptions for cleanup
+  #protection;
+  #agentBus;
+  #protectionStorage;
+  #prevSkillLevels = new Map();
+  #blockedCycles = 0;
 
   constructor(id, options = {}) {
     super();
@@ -56,6 +64,11 @@ export class Agent extends EventEmitter {
     this.skills = new SkillManager(id, options.skills || []);
     this.memory = new AgentMemory(id);
     this.taskGenerator = new TaskGenerator(id, this.role);
+    this.#protection = options.protectionSystem || new ProtectionSystem({ storage: options.protectionStorage });
+    this.#protectionStorage = options.protectionStorage || new ProtectionStorage();
+
+    // Initialize AgentMessageBus
+    this.#agentBus = new AgentMessageBus(this.#bus);
 
     this.stateMachine.on('state-change', (data) => {
       this.emit('state-change', data);
@@ -101,10 +114,37 @@ export class Agent extends EventEmitter {
         );
       };
 
+      // AgentMessageBus subscriptions
+      const onAgentMessage = (data) => {
+        if (data.toAgentId === this.id || data.toAgentId === 'all') {
+          // Store received message in memory with tag from fromAgentId
+          this.memory.store(
+            `msg-${data.messageId}-${Date.now()}`,
+            `Nachricht von ${data.fromAgentId}: ${data.content}`,
+            { importance: 'medium', tags: [data.fromAgentId, 'message'] },
+          );
+          // Emit event for listeners
+          this.emit('agent:message', data);
+          // Publish event to bus
+          if (this.#bus) this.#bus.publish('agent:message-received', data);
+        }
+      };
+
+      const onHelpRequest = (data) => {
+        if (data.toAgentId === this.id || data.toAgentId === 'all') {
+          // Emit event for listeners
+          this.emit('agent:help-request', data);
+          // Publish event to bus
+          if (this.#bus) this.#bus.publish('agent:help-request-received', data);
+        }
+      };
+
       this.#busSubscriptions.push(
         this.#bus.subscribe('agent:output', onOutput),
         this.#bus.subscribe('agent:task-completed', onTaskCompleted),
         this.#bus.subscribe('user:message', onUserMessage),
+        this.#bus.subscribe('agent:message', onAgentMessage),
+        this.#bus.subscribe('agent:help-request', onHelpRequest),
       );
     }
   }
@@ -114,6 +154,22 @@ export class Agent extends EventEmitter {
   async runLoop() {
     if (this.#working) return; // skip if previous LLM call still running
     this.#cycleCount++;
+
+    // Protection check before each cycle
+    const violations = this.#runProtectionCheck();
+    if (violations.length > 0 && this.#bus) {
+      this.#bus.publish('agent:protection-violation', {
+        agentId: this.id, agentName: this.name, violations,
+      });
+    }
+
+    // Persist protection storage state after each cycle
+    await this.#protection.saveToStorage(this.id);
+
+    // Track blocked cycles for deadlock detection
+    if (this.state === STATES.BLOCKED) this.#blockedCycles++;
+    else this.#blockedCycles = 0;
+
     switch (this.state) {
       case STATES.IDLE:     await this.#handleIdle();    break;
       case STATES.WORKING:  await this.#handleWorking(); break;
@@ -124,6 +180,29 @@ export class Agent extends EventEmitter {
       case STATES.HELP:     break;
     }
     this.emit('cycle', { id: this.id, cycle: this.#cycleCount, state: this.state, energy: this.energy.energy });
+  }
+
+  #runProtectionCheck() {
+    const currentSkills = new Map();
+    for (const [name, data] of this.skills.getSkills()) {
+      currentSkills.set(name, data.level);
+    }
+
+    const violations = this.#protection.check(this.id, {
+      skillLevels: currentSkills,
+      prevSkillLevels: this.#prevSkillLevels,
+      commitments: this.#taskQueue.length,
+      boostCount: this.energy.getStats().boosts,
+      memorySize: this.memory.getStats().total,
+      agentState: this.state,
+      blockedActions: this.#blockedCycles,
+      helpRequested: this.state === STATES.HELP,
+    });
+
+    // Snapshot current skills for next tick comparison
+    this.#prevSkillLevels = currentSkills;
+
+    return violations;
   }
 
   async #handleIdle() {
@@ -183,6 +262,9 @@ export class Agent extends EventEmitter {
       });
       return;
     }
+
+    // Record action for protection system
+    this.#protection.recordAction(this.id, 'work', this.#currentTask?.title || 'unknown');
 
     // Actually do work with LLM
     this.#working = true;
@@ -252,15 +334,33 @@ export class Agent extends EventEmitter {
         messages.push(...summarized);
       }
 
-      const result = await this.#llm.query(messages, {
+      const llmOptions = {
         temperature: 0.8,
         maxTokens: 4096,
         tools: toolDefs,
         signal: AbortSignal.timeout(60000),
-      });
+      };
 
-      const content = result?.content || '';
-      const toolCalls = result?.toolCalls || [];
+      let content = '';
+      let toolCalls = [];
+
+      if (typeof this.#llm.queryStream === 'function') {
+        for await (const chunk of this.#llm.queryStream(messages, llmOptions)) {
+          if (chunk.type === 'token' && this.#bus) {
+            this.#bus.publish('agent:token', {
+              agentId: this.id, agentName: this.name, text: chunk.text,
+            });
+          }
+          if (chunk.type === 'done') {
+            content = chunk.content || '';
+            toolCalls = chunk.toolCalls || [];
+          }
+        }
+      } else {
+        const result = await this.#llm.query(messages, llmOptions);
+        content = result?.content || '';
+        toolCalls = result?.toolCalls || [];
+      }
 
       // If the LLM returned text with no tool calls, task is done
       if (toolCalls.length === 0) {
@@ -289,6 +389,7 @@ export class Agent extends EventEmitter {
         };
 
         try {
+          this.#protection.recordAction(this.id, `tool:${call.name}`, JSON.stringify(call.args).slice(0, 100));
           const toolResult = await this.#toolRunner.execute(this.id, call.name, call.args, toolContext);
           const resultStr = this.#contextManager.truncateToolResult(
             JSON.stringify(toolResult),
@@ -470,6 +571,27 @@ export class Agent extends EventEmitter {
     ];
   }
 
+  /**
+   * Send a message to another agent.
+   * @param {string} agentId - Target agent ID (or 'all' for broadcast)
+   * @param {string|Object} content - Message content
+   * @param {Object} [options] - Additional options
+   * @returns {string} The generated message ID
+   */
+  sendTo(agentId, content, options = {}) {
+    return this.#agentBus.send(this.id, agentId, content, options);
+  }
+
+  /**
+   * Request help from another agent.
+   * @param {string} agentId - Target agent ID (or 'all' for broadcast)
+   * @param {string} description - Help description
+   * @returns {string} The generated message ID
+   */
+  requestHelp(agentId, description) {
+    return this.#agentBus.requestHelp(this.id, agentId, description);
+  }
+
   async #saveOutput(task, content) {
     const docsDir = path.join(this.#outputDir, 'docs');
     await fs.mkdir(docsDir, { recursive: true });
@@ -543,6 +665,8 @@ export class Agent extends EventEmitter {
   destroy() {
     for (const unsub of this.#busSubscriptions) unsub();
     this.#busSubscriptions = [];
+    // Save protection storage state before cleanup
+    this.#protection.saveToStorage(this.id);
     this.removeAllListeners();
   }
 

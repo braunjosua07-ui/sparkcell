@@ -34,6 +34,22 @@ const ALL_SKILLS = [
   'design', 'prototyping', 'finance', 'negotiation',
 ];
 
+const RESERVED_NAMES = new Set([
+  'config', 'startup', 'test', 'admin', 'system', 'shared', 'default',
+  'templates', 'agents', 'output', 'logs', 'new', 'help', 'version',
+]);
+const NAME_MIN_LENGTH = 2;
+const NAME_MAX_LENGTH = 64;
+
+export function validateStartupName(name) {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (slug.length < NAME_MIN_LENGTH) return { ok: false, error: `Name zu kurz (min. ${NAME_MIN_LENGTH} Zeichen).` };
+  if (slug.length > NAME_MAX_LENGTH) return { ok: false, error: `Name zu lang (max. ${NAME_MAX_LENGTH} Zeichen).` };
+  if (RESERVED_NAMES.has(slug)) return { ok: false, error: `"${slug}" ist ein reservierter Name.` };
+  if (/^\d/.test(slug)) return { ok: false, error: 'Name darf nicht mit einer Zahl beginnen.' };
+  return { ok: true, slug };
+}
+
 export async function runNewStartup() {
   banner('Neues Startup erstellen');
 
@@ -45,7 +61,12 @@ export async function runNewStartup() {
     return;
   }
 
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const validation = validateStartupName(name);
+  if (!validation.ok) {
+    warn(validation.error);
+    return;
+  }
+  const slug = validation.slug;
   const startupDir = paths.startup(slug);
 
   try {

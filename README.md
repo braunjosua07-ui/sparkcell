@@ -16,6 +16,8 @@ SparkCell runs autonomous AI teams that simulate a startup from day one. Multipl
 - **Communication bus** — Async message passing between agents with a commitment protocol and pause room for coordination
 - **Auto-task generation** — Agents generate and assign tasks to each other based on simulation state
 - **Budget tracking** — Per-simulation cost tracking with circuit breakers to stay within spend limits
+- **7 Protection Guards** — Loop detection, skill inflation, commitment overload, isolation, energy exploit, memory overflow, deadlock detection
+- **Agent-to-Agent Messaging** — Direct communication with help requests and responses
 
 ---
 
@@ -111,6 +113,8 @@ SparkCell is a single-process application. All agents run on one event loop usin
 | `AgentMemory` | Per-agent short- and long-term memory store |
 | `KnowledgeGraph` | Shared structured knowledge base across all agents |
 | `SkillManager` | Skill acquisition and proficiency tracking |
+| `ProtectionSystem` | 7 safety guards: loop, skill inflation, commitment, isolation, energy, memory, deadlock |
+| `AgentMessageBus` | Agent-to-agent messaging with help requests/responses |
 
 **Communication**
 | Module | Responsibility |
@@ -135,6 +139,15 @@ SparkCell is a single-process application. All agents run on one event loop usin
 | `CodeGenerator` | Source code generation and file scaffolding |
 | `ResearchTool` | Synthesises research queries into knowledge graph entries |
 
+**Tools**
+| Module | Responsibility |
+|---|---|
+| `ToolRunner` | Tool registration, validation, execution with permission levels |
+| `ToolPermissions` | Permission levels: open, restricted, approval workflow |
+| `GlobTool`, `GrepTool` | File system search tools |
+| `ReadFileTool`, `WriteFileTool` | File I/O with path validation |
+| `EditFileTool` | In-place file editing with context awareness |
+
 **TUI**
 - Built with React 18 and Ink v5
 - Tab views: Agents, Activity Log, Shared Whiteboard, Budget
@@ -157,3 +170,99 @@ When creating a new startup, pick a team template:
 ## License
 
 MIT
+
+---
+
+## API Reference
+
+### Agent
+
+```javascript
+import { Agent } from '@sparkcell/core';
+
+const agent = new Agent('my-agent', {
+  name: 'MyAgent',
+  role: 'developer',
+  bus: eventBus,
+  llm: llmClient,
+  toolRunner: toolRunner,
+});
+
+// Messaging
+const msgId = agent.sendTo('other-agent', 'Hello!');
+const helpId = agent.requestHelp('senior-agent', 'Need guidance on...');
+
+// Status
+const status = agent.getStatus();
+// { id, name, role, state, energy, currentTask, queueLength, cycleCount }
+```
+
+### ProtectionSystem
+
+```javascript
+import { ProtectionSystem } from '@sparkcell/core';
+
+const protection = new ProtectionSystem();
+
+// Actions are recorded automatically by Agent
+// Manual check for custom scenarios:
+const violations = protection.check(agentId, {
+  skillLevels: currentSkills,
+  prevSkillLevels: previousSkills,
+  commitments: pendingTasks,
+  boostCount: energyBoosts,
+  memorySize: memoryCount,
+  agentState: currentState,
+  blockedActions: consecutiveBlocked,
+  helpRequested: isAskingForHelp,
+});
+```
+
+### ToolRunner
+
+```javascript
+import { ToolRunner } from '@sparkcell/tools';
+import { ToolPermissions } from '@sparkcell/tools';
+
+const permissions = new ToolPermissions();
+const toolRunner = new ToolRunner({ permissions });
+
+// Register a custom tool
+toolRunner.registerTool({
+  name: 'myTool',
+  description: 'Does something useful',
+  parameters: { arg1: { type: 'string', description: 'Argument 1' } },
+  execute: async (args, context) => ({
+    success: true,
+    output: `Result: ${args.arg1}`,
+  }),
+  permissionLevel: 'open', // or 'restricted' or 'approval'
+});
+
+// Execute with context
+const result = await toolRunner.execute('agent-id', 'myTool', { arg1: 'value' }, {
+  workDir: '/path/to/workdir',
+  outputDir: '/path/to/output',
+});
+```
+
+---
+
+## Testing
+
+```bash
+# All tests
+npm test
+
+# Unit tests only
+npm run test:unit
+
+# Integration tests
+npm run test:integration
+
+# Wizard tests
+npm run test:wizard
+
+# TUI tests
+npm run test:tui
+```

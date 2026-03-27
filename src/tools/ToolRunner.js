@@ -28,6 +28,10 @@ export class ToolRunner {
     this.#tools.set(tool.name, tool);
   }
 
+  deregisterTool(name) {
+    return this.#tools.delete(name);
+  }
+
   async registerDirectory(dir) {
     let entries;
     try {

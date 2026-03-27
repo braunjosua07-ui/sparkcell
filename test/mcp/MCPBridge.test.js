@@ -72,6 +72,30 @@ describe('MCPClientAdapter', () => {
     assert.equal(result.success, false);
     assert.ok(result.error.includes('not connected'));
   });
+
+  it('getStatus includes circuitState and backoffMs', () => {
+    const adapter = new MCPClientAdapter('test', {
+      transport: 'stdio',
+      command: 'echo',
+      args: [],
+    });
+    const status = adapter.getStatus();
+    assert.equal(status.circuitState, 'CLOSED');
+    assert.equal(status.backoffMs, 1000);
+    assert.equal(status.consecutiveFailures, 0);
+  });
+
+  it('disconnect resets circuit breaker state', async () => {
+    const adapter = new MCPClientAdapter('test', {
+      transport: 'stdio',
+      command: 'echo',
+      args: [],
+    });
+    await adapter.disconnect();
+    const status = adapter.getStatus();
+    assert.equal(status.circuitState, 'CLOSED');
+    assert.equal(status.backoffMs, 1000);
+  });
 });
 
 describe('MCPBridge', () => {
