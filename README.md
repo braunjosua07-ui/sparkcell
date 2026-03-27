@@ -18,6 +18,8 @@ SparkCell runs autonomous AI teams that simulate a startup from day one. Multipl
 - **Budget tracking** — Per-simulation cost tracking with circuit breakers to stay within spend limits
 - **7 Protection Guards** — Loop detection, skill inflation, commitment overload, isolation, energy exploit, memory overflow, deadlock detection
 - **Agent-to-Agent Messaging** — Direct communication with help requests and responses
+- **Protection Storage** — JSON-file persistence for action history with automatic rotation
+- **Performance Metrics** — Real-time tracking of cycles/sec, latency, memory, and event rates
 
 ---
 
@@ -115,6 +117,8 @@ SparkCell is a single-process application. All agents run on one event loop usin
 | `SkillManager` | Skill acquisition and proficiency tracking |
 | `ProtectionSystem` | 7 safety guards: loop, skill inflation, commitment, isolation, energy, memory, deadlock |
 | `AgentMessageBus` | Agent-to-agent messaging with help requests/responses |
+| `Metrics` | Performance tracking: cycles, timing, memory, event rates |
+| `ProtectionStorage` | JSON-file persistence for protection action history with rotation |
 
 **Communication**
 | Module | Responsibility |
@@ -244,6 +248,27 @@ const result = await toolRunner.execute('agent-id', 'myTool', { arg1: 'value' },
   workDir: '/path/to/workdir',
   outputDir: '/path/to/output',
 });
+```
+
+---
+
+### Metrics
+
+```javascript
+import { metrics } from '@sparkcell/core';
+
+// Record timing
+metrics.recordTiming('tool:execution', durationMs);
+metrics.recordEvent('agent:cycle');
+metrics.recordGauge('memory:heap', memUsage);
+
+// Get stats
+const stats = metrics.getStats('tool:execution');
+// { name, count, avg, min, max, last, total }
+
+// Get full system metrics
+const system = metrics.getSystemMetrics();
+// { uptime, memory, cpuUsage }
 ```
 
 ---

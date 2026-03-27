@@ -10,6 +10,7 @@ import { ContextManager } from '../tools/ContextManager.js';
 import { ProtectionSystem } from './ProtectionSystem.js';
 import { ProtectionStorage } from './ProtectionStorage.js';
 import { AgentMessageBus, MESSAGE_TYPE } from './AgentMessageBus.js';
+import { metrics } from './Metrics.js';
 
 export class Agent extends EventEmitter {
   #bus;
@@ -36,6 +37,7 @@ export class Agent extends EventEmitter {
   #protection;
   #agentBus;
   #protectionStorage;
+  #metrics = metrics;
   #prevSkillLevels = new Map();
   #blockedCycles = 0;
 
@@ -153,6 +155,7 @@ export class Agent extends EventEmitter {
 
   async runLoop() {
     if (this.#working) return; // skip if previous LLM call still running
+    const cycleStart = performance.now();
     this.#cycleCount++;
 
     // Protection check before each cycle
@@ -180,9 +183,12 @@ export class Agent extends EventEmitter {
       case STATES.HELP:     break;
     }
     this.emit('cycle', { id: this.id, cycle: this.#cycleCount, state: this.state, energy: this.energy.energy });
+    this.#metrics.recordTiming('agent:cycleDuration', performance.now() - cycleStart);
+    this.#metrics.recordEvent('agent:cycleCount');
   }
 
   #runProtectionCheck() {
+    const checkStart = performance.now();
     const currentSkills = new Map();
     for (const [name, data] of this.skills.getSkills()) {
       currentSkills.set(name, data.level);
@@ -201,6 +207,13 @@ export class Agent extends EventEmitter {
 
     // Snapshot current skills for next tick comparison
     this.#prevSkillLevels = currentSkills;
+
+    // Track protection check duration
+    this.#metrics.recordTiming('agent:protectionCheck', performance.now() - checkStart);
+    this.#metrics.recordEvent('agent:protectionCheckCount');
+    if (violations.length > 0) {
+      this.#metrics.recordEvent('agent:protectionViolation', violations.length);
+    }
 
     return violations;
   }
@@ -266,6 +279,9 @@ export class Agent extends EventEmitter {
     // Record action for protection system
     this.#protection.recordAction(this.id, 'work', this.#currentTask?.title || 'unknown');
 
+    // Track working state duration
+    const workStart = performance.now();
+
     // Actually do work with LLM
     this.#working = true;
     try {
@@ -301,6 +317,8 @@ export class Agent extends EventEmitter {
       }
     } finally {
       this.#working = false;
+      // Record working duration as timing metric
+      this.#metrics.recordTiming('agent:workDuration', performance.now() - workStart);
     }
   }
 
@@ -320,6 +338,7 @@ export class Agent extends EventEmitter {
   }
 
   async #agenticLoop(task) {
+    const loopStart = performance.now();
     const messages = this.#buildPrompt(task);
     const toolDefs = this.#toolRunner.getToolDefinitions('openai');
     const maxIterations = 25;
@@ -419,10 +438,15 @@ export class Agent extends EventEmitter {
       if (content) finalContent += content + '\n';
     }
 
+    const loopDuration = performance.now() - loopStart;
+    this.#metrics.recordTiming('agent:agenticLoop', loopDuration);
+    this.#metrics.recordEvent('agent:agenticLoopCount');
+
     await this.#processLLMResult(task, finalContent);
   }
 
   async #singleShotLLM(task) {
+    const queryStart = performance.now();
     const prompt = this.#buildPrompt(task);
     const result = await this.#llm.query(prompt, {
       temperature: 0.8,
@@ -432,6 +456,9 @@ export class Agent extends EventEmitter {
 
     const content = result?.content || '';
     if (!content) return;
+
+    this.#metrics.recordTiming('agent:llmQuery', performance.now() - queryStart);
+    this.#metrics.recordEvent('agent:llmQueryCount');
 
     await this.#processLLMResult(task, content);
   }
@@ -687,6 +714,19 @@ export class Agent extends EventEmitter {
       currentTask: this.#currentTask,
       queueLength: this.#taskQueue.length,
       cycleCount: this.#cycleCount,
+      metrics: this.getMetrics(),
+    };
+  }
+
+  getMetrics() {
+    return {
+      cycleDuration: this.#metrics.getStats('agent:cycleDuration'),
+      workDuration: this.#metrics.getStats('agent:workDuration'),
+      protectionCheck: this.#metrics.getStats('agent:protectionCheck'),
+      llmQuery: this.#metrics.getStats('agent:llmQuery'),
+      agenticLoop: this.#metrics.getStats('agent:agenticLoop'),
+      protectionViolation: this.#metrics.getStats('agent:protectionViolation'),
+      globalMemory: this.#metrics.getMemoryStats(),
     };
   }
 
