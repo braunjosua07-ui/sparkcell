@@ -145,11 +145,14 @@ export function AgentsView({ sparkCell }) {
           : React.createElement(Text, { dimColor: true }, `Queue: ${a.queueLength || 0} | Cycles: ${a.cycleCount || 0}`),
 
         // Memory Tier Status
-        memoryStats.total > 0 ? React.createElement(Box, { marginTop: 0.5 },
-          React.createElement(Text, { dimColor: true, fontSize: 10 },
-            `Memory: \u2605 ${memoryStats.hot} / \u2606 ${memoryStats.warm} / \u26AB ${memoryStats.cold || 0}`
-          ),
-        ) : null,
+        (() => {
+          const memoryStats = a.memoryStats || { total: 0, hot: 0, warm: 0, cold: 0 };
+          return memoryStats.total > 0 ? React.createElement(Box, { marginTop: 0.5 },
+            React.createElement(Text, { dimColor: true, fontSize: 10 },
+              `Memory: \u2605 ${memoryStats.hot} / \u2606 ${memoryStats.warm} / \u26AB ${memoryStats.cold || 0}`
+            ),
+          ) : null;
+        })(),
       );
     }),
   );

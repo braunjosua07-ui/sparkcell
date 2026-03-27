@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs/promises';
 
 export class ToolValidator {
   validateToolInterface(tool) {
@@ -43,15 +44,27 @@ export class ToolValidator {
     return resolved;
   }
 
-  isPathAllowed(filePath, context) {
+  async isPathAllowed(filePath, context) {
     if (!context.workDir && !context.outputDir) return true;
-    const resolved = path.resolve(filePath);
+
+    // Resolve symlinks
+    let resolved;
+    try {
+      resolved = await fs.realpath(filePath);
+    } catch {
+      // File doesn't exist yet, use as-is
+      resolved = path.resolve(filePath);
+    }
+
+    // Check for null bytes
+    if (filePath.includes('\0')) return false;
+
     const workDir = context.workDir ? path.resolve(context.workDir) : null;
     const outputDir = context.outputDir ? path.resolve(context.outputDir) : null;
-    if (workDir && resolved.startsWith(workDir + path.sep)) return true;
-    if (workDir && resolved === workDir) return true;
-    if (outputDir && resolved.startsWith(outputDir + path.sep)) return true;
-    if (outputDir && resolved === outputDir) return true;
+
+    if (workDir && (resolved.startsWith(workDir + path.sep) || resolved === workDir)) return true;
+    if (outputDir && (resolved.startsWith(outputDir + path.sep) || resolved === outputDir)) return true;
+
     return false;
   }
 }

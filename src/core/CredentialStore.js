@@ -44,11 +44,9 @@ export class CredentialStore {
       this.#key = await this.#tryKeychainKey();
     }
 
-    // Last resort: machine-derived key (same as old SecureKeyManager)
+    // NO MORE FALLBACK - require password on non-macOS or if Keychain unavailable
     if (!this.#key) {
-      const os = await import('node:os');
-      const seed = `${os.hostname()}-${os.userInfo().username}-sparkcell-credentials`;
-      this.#key = crypto.createHash('sha256').update(seed).digest();
+      throw new Error('CredentialStore requires either a password or macOS Keychain. Pass password: await store.initialize("your-password")');
     }
 
     // Load existing credentials

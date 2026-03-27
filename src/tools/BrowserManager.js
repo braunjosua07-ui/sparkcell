@@ -61,6 +61,23 @@ export class BrowserManager {
    * @returns {{ pageId: string, url: string }}
    */
   async open(agentId, url) {
+    // Validate URL
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error('Invalid URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('Only HTTP/HTTPS URLs allowed');
+    }
+
+    const blockedRanges = [/^127\./, /^10\./, /^192\.168\./, /^172\.(1[6-9]|2[0-9]|3[01])\./, /^169\.254\./, /^0\.0\.0\.0$/, /^localhost$/i];
+    if (blockedRanges.some(r => r.test(parsed.hostname))) {
+      throw new Error('Access to internal networks not allowed');
+    }
+
     // Check tab limit
     const agentTabs = this.#agentPages.get(agentId) || new Set();
     if (agentTabs.size >= MAX_TABS_PER_AGENT) {

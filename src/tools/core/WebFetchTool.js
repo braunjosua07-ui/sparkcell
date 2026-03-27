@@ -13,6 +13,33 @@ export default class WebFetchTool {
   async execute(args, context) {
     const { url, method = 'GET', headers = {}, body, selector } = args;
 
+    // Validate URL
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return { success: false, output: null, error: 'Invalid URL' };
+    }
+
+    // Block dangerous protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return { success: false, output: null, error: 'Only HTTP/HTTPS URLs allowed' };
+    }
+
+    // Block internal IPs
+    const blockedRanges = [
+      /^127\./,
+      /^10\./,
+      /^192\.168\./,
+      /^172\.(1[6-9]|2[0-9]|3[01])\./,
+      /^169\.254\./,  // AWS metadata
+      /^0\.0\.0\.0$/,
+      /^localhost$/i,
+    ];
+    if (blockedRanges.some(r => r.test(parsed.hostname))) {
+      return { success: false, output: null, error: 'Access to internal networks not allowed' };
+    }
+
     try {
       const fetchOpts = {
         method,

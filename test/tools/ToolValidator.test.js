@@ -67,38 +67,38 @@ describe('ToolValidator — validateArgs', () => {
 describe('ToolValidator — isPathAllowed', () => {
   const validator = new ToolValidator();
 
-  it('allows paths within workDir', () => {
-    assert.ok(validator.isPathAllowed('/home/user/project/src/file.js', {
+  it('allows paths within workDir', async () => {
+    assert.ok(await validator.isPathAllowed('/home/user/project/src/file.js', {
       workDir: '/home/user/project',
     }));
   });
 
-  it('allows paths within outputDir', () => {
-    assert.ok(validator.isPathAllowed('/home/user/output/result.txt', {
+  it('allows paths within outputDir', async () => {
+    assert.ok(await validator.isPathAllowed('/home/user/output/result.txt', {
       workDir: '/home/user/project',
       outputDir: '/home/user/output',
     }));
   });
 
-  it('denies paths outside workDir and outputDir', () => {
-    assert.equal(validator.isPathAllowed('/etc/passwd', {
+  it('denies paths outside workDir and outputDir', async () => {
+    assert.equal(await validator.isPathAllowed('/etc/passwd', {
       workDir: '/home/user/project',
       outputDir: '/home/user/output',
     }), false);
   });
 
-  it('denies path traversal', () => {
-    assert.equal(validator.isPathAllowed('/home/user/project/../../../etc/passwd', {
+  it('denies path traversal', async () => {
+    assert.equal(await validator.isPathAllowed('/home/user/project/../../../etc/passwd', {
       workDir: '/home/user/project',
     }), false);
   });
 
-  it('allows when no workDir/outputDir set', () => {
-    assert.ok(validator.isPathAllowed('/anywhere', {}));
+  it('allows when no workDir/outputDir set', async () => {
+    assert.ok(await validator.isPathAllowed('/anywhere', {}));
   });
 
-  it('allows workDir itself', () => {
-    assert.ok(validator.isPathAllowed('/home/user/project', {
+  it('allows workDir itself', async () => {
+    assert.ok(await validator.isPathAllowed('/home/user/project', {
       workDir: '/home/user/project',
     }));
   });

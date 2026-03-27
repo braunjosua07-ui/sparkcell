@@ -36,6 +36,7 @@ export class SparkCell extends EventEmitter {
   #intervals = [];
   #running = false;
   #paused = false;
+  #shuttingDown = false;
   #startTime;
   #config;
 
@@ -277,6 +278,9 @@ export class SparkCell extends EventEmitter {
   }
 
   async shutdown() {
+    if (this.#shuttingDown) return;
+    this.#shuttingDown = true;
+
     if (!this.#running) return;
     this.#running = false;
     this.#logger.info('Shutting down...');

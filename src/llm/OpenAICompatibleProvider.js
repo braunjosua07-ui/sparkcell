@@ -35,11 +35,29 @@ export class OpenAICompatibleProvider {
     const headers = { 'Content-Type': 'application/json' };
     if (this.#apiKey) headers['Authorization'] = `Bearer ${this.#apiKey}`;
     this.#stats.totalRequests++;
-    const response = await fetch(`${this.#baseUrl}/chat/completions`, {
-      method: 'POST', headers, body: JSON.stringify(body), signal: options.signal,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const signal = options.signal || controller.signal;
+    let response;
+    try {
+      response = await fetch(`${this.#baseUrl}/chat/completions`, {
+        method: 'POST', headers, body: JSON.stringify(body), signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!response.ok) {
       this.#stats.totalErrors++;
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const error = new Error('Rate limit exceeded');
+        error.name = 'RateLimitError';
+        error.retryAfter = retryAfter ? parseInt(retryAfter) : 60;
+        throw error;
+      }
+      if (response.status === 401) {
+        throw Object.assign(new Error('Authentication failed'), { name: 'AuthenticationError' });
+      }
       throw new Error(`LLM request failed: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
@@ -53,7 +71,14 @@ export class OpenAICompatibleProvider {
       id: tc.id,
       name: tc.function?.name,
       args: typeof tc.function?.arguments === 'string'
-        ? JSON.parse(tc.function.arguments)
+        ? (() => {
+            try {
+              return JSON.parse(tc.function.arguments);
+            } catch (e) {
+              console.warn('Failed to parse tool args:', e.message);
+              return { _parseError: true, raw: tc.function.arguments };
+            }
+          })()
         : tc.function?.arguments || {},
     }));
     return { content, toolCalls, usage: data.usage || {}, model: data.model };
@@ -66,11 +91,29 @@ export class OpenAICompatibleProvider {
     if (this.#apiKey) headers['Authorization'] = `Bearer ${this.#apiKey}`;
     this.#stats.totalRequests++;
 
-    const response = await fetch(`${this.#baseUrl}/chat/completions`, {
-      method: 'POST', headers, body: JSON.stringify(body), signal: options.signal,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const signal = options.signal || controller.signal;
+    let response;
+    try {
+      response = await fetch(`${this.#baseUrl}/chat/completions`, {
+        method: 'POST', headers, body: JSON.stringify(body), signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!response.ok) {
       this.#stats.totalErrors++;
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const error = new Error('Rate limit exceeded');
+        error.name = 'RateLimitError';
+        error.retryAfter = retryAfter ? parseInt(retryAfter) : 60;
+        throw error;
+      }
+      if (response.status === 401) {
+        throw Object.assign(new Error('Authentication failed'), { name: 'AuthenticationError' });
+      }
       throw new Error(`LLM stream failed: ${response.status} ${response.statusText}`);
     }
 
@@ -97,7 +140,14 @@ export class OpenAICompatibleProvider {
     }
     const parsed = toolCalls.map(tc => ({
       id: tc.id, name: tc.name,
-      args: tc.args ? JSON.parse(tc.args) : {},
+      args: (() => {
+        try {
+          return tc.args ? JSON.parse(tc.args) : {};
+        } catch (e) {
+          console.warn('Failed to parse tool args:', e.message);
+          return { _parseError: true, raw: tc.args };
+        }
+      })(),
     }));
     yield { type: 'done', content: fullContent, toolCalls: parsed };
   }

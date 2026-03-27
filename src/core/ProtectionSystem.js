@@ -45,8 +45,10 @@ export class ProtectionSystem {
     if (!this.#actionLog.has(agentId)) {
       this.#actionLog.set(agentId, []);
     }
+    const actions = this.#actionLog.get(agentId);
     const action = { actionType, target, timestamp: Date.now() };
-    this.#actionLog.get(agentId).push(action);
+    actions.push(action);
+    if (actions.length > 1000) actions.shift();
     this.#storage.add(agentId, action);
   }
 

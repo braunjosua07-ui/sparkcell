@@ -122,15 +122,33 @@ export class LLMManager {
     this._circuitBreakers.delete(name);
   }
 
-  _isCircuitOpen(name) {
+  // Pure check - no mutation
+  isCircuitOpen(name) {
     const cb = this._circuitBreakers.get(name);
-    if (!cb || cb.failures < CB_FAILURE_THRESHOLD) return false;
+    if (!cb || !cb.openedAt) return false;
     const cooldown = Math.min(CB_BASE_COOLDOWN * 2 ** cb.attempt, CB_MAX_COOLDOWN);
-    if (Date.now() - cb.openedAt > cooldown) {
-      // Half-open: allow retry, escalate backoff for next failure cycle
-      cb.failures = 0;
-      cb.openedAt = null;
-      cb.attempt++;
+    return Date.now() - cb.openedAt <= cooldown;
+  }
+
+  // Separate transition method
+  transitionToHalfOpen(name) {
+    const cb = this._circuitBreakers.get(name);
+    if (!cb) return false;
+    cb.failures = 0;
+    cb.openedAt = null;
+    cb.attempt++;
+    return true;
+  }
+
+  // Legacy method for backwards compatibility - checks and transitions if cooldown expired
+  _isCircuitOpen(name) {
+    if (!this.isCircuitOpen(name)) {
+      // If circuit is not open, check if we're in half-open state (cooldown expired)
+      const cb = this._circuitBreakers.get(name);
+      if (cb && cb.openedAt) {
+        // Cooldown expired - transition to half-open
+        this.transitionToHalfOpen(name);
+      }
       return false;
     }
     return true;

@@ -167,6 +167,7 @@ export class Agent extends EventEmitter {
 
   async runLoop() {
     if (this.#working) return; // skip if previous LLM call still running
+    this.#working = true; // Set immediately to prevent TOCTOU race condition
     const cycleStart = performance.now();
     this.#cycleCount++;
 
@@ -295,7 +296,6 @@ export class Agent extends EventEmitter {
     const workStart = performance.now();
 
     // Actually do work with LLM
-    this.#working = true;
     try {
       if (this.#llm) {
         await this.#doLLMWork();
@@ -739,11 +739,13 @@ export class Agent extends EventEmitter {
     }
   }
 
-  destroy() {
-    for (const unsub of this.#busSubscriptions) unsub();
+  async destroy() {
+    for (const unsub of this.#busSubscriptions) {
+      try { unsub(); } catch { /* ignore */ }
+    }
     this.#busSubscriptions = [];
     // Save protection storage state before cleanup
-    this.#protection.saveToStorage(this.id);
+    await this.#protection.saveToStorage(this.id);
     this.removeAllListeners();
   }
 

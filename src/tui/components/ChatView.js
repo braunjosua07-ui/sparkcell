@@ -22,6 +22,7 @@ export function ChatView({ sparkCell }) {
   ]);
   const entries = useFeed(sparkCell?.bus, 20);
   const subscribedRef = useRef(false);
+  const prevSparkCellRef = useRef(null);
   const [maskedInput, setMaskedInput] = useState(null); // { platform } when active
 
   const addMessage = useCallback((msg) => {
@@ -33,6 +34,12 @@ export function ChatView({ sparkCell }) {
 
   // Listen for agent chat responses on the bus
   useEffect(() => {
+    // Reset subscription if sparkCell changed
+    if (sparkCell !== prevSparkCellRef.current) {
+      subscribedRef.current = false;
+      prevSparkCellRef.current = sparkCell;
+    }
+
     if (!sparkCell?.bus || subscribedRef.current) return;
     subscribedRef.current = true;
 
@@ -92,6 +99,10 @@ export function ChatView({ sparkCell }) {
       const password = rest.join(':');
       if (!username || !password) {
         addMessage({ type: 'error', text: 'Format: username:password' });
+        return;
+      }
+      if (!sparkCell.credentialStore) {
+        addMessage({ type: 'error', text: 'Credential store not available' });
         return;
       }
       sparkCell.credentialStore.store(platform, { username, password }).then(() => {

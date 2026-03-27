@@ -35,18 +35,36 @@ export class AnthropicProvider {
     if (options.tools && options.tools.length > 0) {
       requestBody.tools = options.tools;
     }
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.#apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify(requestBody),
-      signal: options.signal,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const signal = options.signal || controller.signal;
+    let response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.#apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!response.ok) {
       this.#stats.totalErrors++;
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const error = new Error('Rate limit exceeded');
+        error.name = 'RateLimitError';
+        error.retryAfter = retryAfter ? parseInt(retryAfter) : 60;
+        throw error;
+      }
+      if (response.status === 401) {
+        throw Object.assign(new Error('Authentication failed'), { name: 'AuthenticationError' });
+      }
       throw new Error(`Anthropic request failed: ${response.status}`);
     }
     const data = await response.json();
@@ -87,18 +105,36 @@ export class AnthropicProvider {
     if (system) requestBody.system = system;
     if (options.tools?.length > 0) requestBody.tools = options.tools;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.#apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify(requestBody),
-      signal: options.signal,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const signal = options.signal || controller.signal;
+    let response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.#apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!response.ok) {
       this.#stats.totalErrors++;
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const error = new Error('Rate limit exceeded');
+        error.name = 'RateLimitError';
+        error.retryAfter = retryAfter ? parseInt(retryAfter) : 60;
+        throw error;
+      }
+      if (response.status === 401) {
+        throw Object.assign(new Error('Authentication failed'), { name: 'AuthenticationError' });
+      }
       throw new Error(`Anthropic stream failed: ${response.status}`);
     }
 
@@ -123,7 +159,14 @@ export class AnthropicProvider {
           toolCalls.push({
             id: currentToolUse.id,
             name: currentToolUse.name,
-            args: currentToolUse.args ? JSON.parse(currentToolUse.args) : {},
+            args: (() => {
+              try {
+                return currentToolUse.args ? JSON.parse(currentToolUse.args) : {};
+              } catch (e) {
+                console.warn('Failed to parse tool args:', e.message);
+                return { _parseError: true, raw: currentToolUse.args };
+              }
+            })(),
           });
           currentToolUse = null;
         }

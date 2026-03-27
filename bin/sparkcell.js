@@ -34,10 +34,22 @@ program
       info('Kein Startup gefunden. Erstelle eins mit: sparkcell new');
       return;
     }
-    const sc = new SparkCell(startupName, config.data);
-    await sc.initialize();
-    render(React.createElement(App, { sparkCell: sc }));
-    await sc.start();
+    async function main() {
+      try {
+        const sc = new SparkCell(startupName, config.data);
+        await sc.initialize();
+        render(React.createElement(App, { sparkCell: sc }));
+        await sc.start();
+      } catch (error) {
+        console.error('Failed to start SparkCell:', error.message);
+        console.error(error.stack);
+        process.exit(1);
+      }
+    }
+    main().catch(err => {
+      console.error('Fatal error:', err);
+      process.exit(1);
+    });
   });
 
 program
