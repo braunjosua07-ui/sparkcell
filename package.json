@@ -2,11 +2,12 @@
   "name": "sparkcell",
   "version": "2.0.0",
   "type": "module",
-  "description": "Multi-Agent Startup Simulation Platform",
+  "description": "Multi-Agent Startup Simulation Framework - ECHTES TOOL mit Big Five Persönlichkeit, Skill System & Soul Evolution",
   "bin": {
     "sparkcell": "./bin/sparkcell.js"
   },
-  "exports": "./src/index.js",
+  "keywords": ["ai-agent", "multi-agent", "startup-simulation", "llm", "openai", "anthropic", "claude", "mcp", "tool-use", "terminal-ui", "big-five", "personality", "soul", "skill-system"],
+  "homepage": "https://github.com/sparkcell/sparkcell",
   "scripts": {
     "start": "node bin/sparkcell.js",
     "test": "node --test test/**/*.test.js",

@@ -1,293 +1,314 @@
-# SparkCell
+# SparkCell 🚀
 
-**Multi-Agent Startup Simulation Platform**
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node->=18.0.0-green.svg)](https://nodejs.org/)
+[![Tests](https://img.shields.io/badge/tests-420%20passing-brightgreen.svg)](https://github.com/sparkcell/sparkcell)
 
-SparkCell runs autonomous AI teams that simulate a startup from day one. Multiple agents with distinct roles collaborate through a shared communication bus, generate documents and code, manage budgets, and evolve their skills over time — all inside a terminal UI powered by Ink v5.
-
----
-
-## Features
-
-- **Multi-agent AI teams** — Agents with dedicated roles (CEO, CTO, designer, etc.) operate concurrently via cooperative scheduling on a single event loop
-- **Universal LLM support** — 10 providers out of the box: Ollama, LM Studio, OpenAI, Anthropic, Mistral, Groq, Together AI, Perplexity, OpenRouter, and custom endpoints
-- **Terminal UI** — Full React/Ink v5 TUI with tab views for agents, logs, whiteboard, and budget
-- **Energy, skill, and memory systems** — Each agent tracks energy levels, accumulates skills, and maintains a personal memory store
-- **Knowledge graph** — Shared structured knowledge that agents read from and write to
-- **Communication bus** — Async message passing between agents with a commitment protocol and pause room for coordination
-- **Auto-task generation** — Agents generate and assign tasks to each other based on simulation state
-- **Budget tracking** — Per-simulation cost tracking with circuit breakers to stay within spend limits
-- **7 Protection Guards** — Loop detection, skill inflation, commitment overload, isolation, energy exploit, memory overflow, deadlock detection
-- **Agent-to-Agent Messaging** — Direct communication with help requests and responses
-- **Protection Storage** — JSON-file persistence for action history with automatic rotation
-- **Performance Metrics** — Real-time tracking of cycles/sec, latency, memory, and event rates
+> **SparkCell ist kein Simulation - es ist ein ECHTES TOOL!** 🎯
+>
+> Ein Multi-Agent Startup Framework, das echte AI-Agenten (OpenAI, Anthropic, Ollama) mit echten Tools ausführt - Dateien schreiben, Browser steuern, Social Media Posts publishen und mehr.
 
 ---
 
-## Quick Start
+## ✨ Features
+
+| Feature | Beschreibung |
+|---------|-------------|
+| 🤖 **Multi-Agent System** | 5 Role-Templates (CEO, Tech Lead, Product, Designer, Marketing) |
+| 🧠 **Big Five Persönlichkeit** | Wissenschaftlich fundiertes Persönlichkeitsmodell |
+| ⚡ **Skill System** | 12 Skill-Kategorien mit XP-based Leveling |
+| ❤️ **Soul Evolution** | Persönlichkeit ändert sich basierend auf Qualität |
+| 🔧 **26 Core Tools** | Dateien, Browser, Social, Comms (Slack, Discord, Email) |
+| 📦 **MCP Integration** | 6400+ Tools via Model Context Protocol |
+| 🔐 **Security Hardened** | AES-256 Verschlüsselung, API-Key Redaction |
+| 📊 **TUI** | Terminal User Interface mit Echtzeit-Feedback |
+| 🎮 **Agentic Loop** | Tool-use mit max 25 Iterationen pro Task |
+
+---
+
+## 🚀 Quick Start
 
 ```bash
+# Install global
 npm install -g sparkcell
-sparkcell config       # point to your LLM provider
-sparkcell new          # create a new startup
-sparkcell start        # launch the simulation
+
+# Setup LLM provider
+sparkcell setup
+
+# Neues Startup erstellen
+sparkcell new
+
+# Startup starten
+sparkcell start
+
+# Alle Startups auflisten
+sparkcell list
 ```
+
+### CLI Commands
+
+| Command | Beschreibung |
+|---------|-------------|
+| `sparkcell start [name]` | Startup starten |
+| `sparkcell new` | Neues Startup erstellen |
+| `sparkcell list` | Alle Startups auflisten |
+| `sparkcell config [show\|set\|path]` | Konfiguration verwalten |
+| `sparkcell tool list` | Tools auflisten |
+| `sparkcell tool install <url>` | Tool installieren |
+| `sparkcell tool remove <name>` | Tool entfernen |
+| `sparkcell tool enable <name>` | Tool aktivieren |
+| `sparkcell tool disable <name>` | Tool deaktivieren |
+| `sparkcell setup` | Setup-Wizard |
+| `sparkcell doctor` | System-Check |
 
 ---
 
-## Installation
+## 📖 Agent Rollen
 
-**Requirements:** Node.js 18 or later
+### CEO (Strategic Lead)
+- **Openness:** 80 | **Conscientiousness:** 75 | **Extraversion:** 85
+- **Agreeableness:** 60 | **Neuroticism:** 30
+- **Persönlichkeit:** kreativ, gewissenhaft, gesellig, mitfühlend, stabil
+- **Stil:** prägnant, direkt
+- **Ansatz:** decision-driven
+- **Werte:** wachstum, impact, exzellenz
+- Skills: strategy, vision, planning, leadership
 
-```bash
-git clone https://github.com/your-org/sparkcell.git
-cd sparkcell
-npm install
-npm link               # makes `sparkcell` available globally
-```
+### Tech Lead
+- **Openness:** 70 | **Conscientiousness:** 85 | **Extraversion:** 40
+- **Agreeableness:** 70 | **Neuroticism:** 40
+- **Persönlichkeit:** ausgewogen, gewissenhaft, zurückhaltend, harmonie, ausgewogen
+- **Stil:** technisch, genau
+- **Ansatz:** solution-oriented
+- **Werte:**qualität, effizienz, innovation
+- Skills: coding, architecture, debugging, api-design
 
-SparkCell is ESM-only (`"type": "module"`) and uses Node's built-in `fetch` — no external HTTP client required.
+### Product Manager
+- **Openness:** 75 | **Conscientiousness:** 70 | **Extraversion:** 75
+- **Agreeableness:** 80 | **Neuroticism:** 35
+- **Persönlichkeit:** kreativ, strukturiert, sozial, mitfühlend, stabil
+- **Stil:** nutzerzentriert
+- **Ansatz:** data-driven
+- **Werte:** nutzen, wachstum, einfachheit
+- Skills: product, research, analysis, user-stories
 
----
+### Designer
+- **Openness:** 90 | **Conscientiousness:** 60 | **Extraversion:** 60
+- **Agreeableness:** 75 | **Neuroticism:** 45
+- **Persönlichkeit:** sehr kreativ, flexibel, sozial, harmonie, emotional
+- **Stil:** ästhetisch, emotional
+- **Ansatz:** experimentell
+- **Werte:** schönheit, user-experience, ästhetik
+- Skills: design, ux, branding, prototyping
 
-## Usage
-
-```
-sparkcell start [name]     Start a startup simulation (prompts to pick one if name is omitted)
-sparkcell new              Create a new startup
-sparkcell list             List all existing startups
-sparkcell config           Show and edit global settings
-sparkcell export [name]    Export generated documents for a startup
-```
-
-### Examples
-
-```bash
-sparkcell start my-saas        # start a specific simulation by name
-sparkcell list                 # see all simulations and their agent counts
-sparkcell export my-saas       # list exported docs for my-saas
-```
-
----
-
-## Configuration
-
-Global settings are stored at `~/.sparkcell/config.json` by default.
-
-To use a different location, set the `SPARKCELL_HOME` environment variable:
-
-```bash
-export SPARKCELL_HOME=/path/to/custom/dir
-```
-
-Run `sparkcell config` to print the current config path and its contents. Edit the JSON file directly to set your LLM provider, API key, default template, and budget limits.
-
-**Example config:**
-
-```json
-{
-  "provider": "openai",
-  "apiKey": "sk-...",
-  "model": "gpt-4o",
-  "budgetUsd": 5.00
-}
-```
+### Marketing
+- **Openness:** 65 | **Conscientiousness:** 60 | **Extraversion:** 90
+- **Agreeableness:** 70 | **Neuroticism:** 40
+- **Persönlichkeit:** kreativ, strukturiert, sehr gesellig, kooperativ, ausgeglichen
+- **Stil:** persuasiv, emotional
+- **Ansatz:** test-and-learn
+- **Werte:** wachstum, brand, community
+- Skills: marketing, content, social-media, seo
 
 ---
 
-## Architecture
+## 🧠 Persönlichkeits-System (Big Five)
 
-SparkCell is a single-process application. All agents run on one event loop using cooperative scheduling — no worker threads or child processes.
+### Die 5 Kerndimensionen
 
-**Stack:**
-- ESM modules throughout (`"type": "module"`)
-- React 18 + Ink v5 for the terminal UI
-- Node.js built-in `node:test` for the test suite
-- `proper-lockfile` for safe concurrent file access to simulation state
+1. **Openness (Offenheit)** - Kreativität, Neugier, Abenteuerlust
+   - Niedrig: konservativ, strukturiert, risikoscheu
+   - Hoch: kreativ, neugierig, experimentierfreudig
 
-### Key Subsystems
+2. **Conscientiousness (Gewissenhaftigkeit)** - Organisierung, Zuverlässigkeit
+   - Niedrig: spontan, unordentlich, flexibel
+   - Hoch: geordnet, zuverlässig, diszipliniert
 
-**Core**
-| Module | Responsibility |
-|---|---|
-| `Agent` | Agent lifecycle, role definition, decision loop |
-| `StateMachine` | Per-agent state transitions (idle → thinking → acting → resting) |
-| `EnergyManager` | Tracks and replenishes agent energy |
-| `AgentMemory` | Per-agent short- and long-term memory store |
-| `KnowledgeGraph` | Shared structured knowledge base across all agents |
-| `SkillManager` | Skill acquisition and proficiency tracking |
-| `ProtectionSystem` | 7 safety guards: loop, skill inflation, commitment, isolation, energy, memory, deadlock |
-| `AgentMessageBus` | Agent-to-agent messaging with help requests/responses |
-| `Metrics` | Performance tracking: cycles, timing, memory, event rates |
-| `ProtectionStorage` | JSON-file persistence for protection action history with rotation |
+3. **Extraversion (Geselligkeit)** - Energie, Sozialität
+   - Niedrig: introvertiert, zurückhaltend, ruhig
+   - Hoch: extrovertiert, gesellig, energisch
 
-**Communication**
-| Module | Responsibility |
-|---|---|
-| `WorkerBus` | Async message routing between agents |
-| `CommitmentProtocol` | Ensures agents honor assigned tasks |
-| `PauseRoom` | Coordinates agent pauses and synchronisation points |
-| `SharedWhiteboard` | Global scratchpad visible to all agents |
+4. **Agreeableness (Vereinbarkeit)** - Kooperativität, Mitgefühl
+   - Niedrig: wettbewerbsorientiert, kritisch, selbstbewusst
+   - Hoch: kooperativ, mitfühlend, hilfsbereit
 
-**LLM**
-| Module | Responsibility |
-|---|---|
-| `ProviderRegistry` | Registers and resolves the 10 supported LLM providers |
-| `LLMManager` | Request dispatch with circuit breaker and retry logic |
-| `CostRouter` | Routes requests to cheapest capable provider within budget |
+5. **Neuroticism (Neurotizismus)** - Emotionale Stabilität
+   - Niedrig: emotional stabil, ruhig, zuversichtlich
+   - Hoch: emotional labil, ängstlich, empfindlich
 
-**Content**
-| Module | Responsibility |
-|---|---|
-| `DocumentManager` | Creates, versions, and persists markdown documents |
-| `ContentGenerator` | Prose generation for briefs, reports, and pitches |
-| `CodeGenerator` | Source code generation and file scaffolding |
-| `ResearchTool` | Synthesises research queries into knowledge graph entries |
+### Soul Score (0-100)
 
-**Tools**
-| Module | Responsibility |
-|---|---|
-| `ToolRunner` | Tool registration, validation, execution with permission levels |
-| `ToolPermissions` | Permission levels: open, restricted, approval workflow |
-| `GlobTool`, `GrepTool` | File system search tools |
-| `ReadFileTool`, `WriteFileTool` | File I/O with path validation |
-| `EditFileTool` | In-place file editing with context awareness |
-
-**TUI**
-- Built with React 18 and Ink v5
-- Tab views: Agents, Activity Log, Shared Whiteboard, Budget
-- Live updates streamed from agent events via React state
-
----
-
-## Templates
-
-When creating a new startup, pick a team template:
-
-| Template | Agents | Best for |
-|---|---|---|
-| `lean-3` | 3 | Solo founders, fast experiments |
-| `growth-5` | 5 | Early-stage teams with specialisation |
-| `enterprise-8` | 8 | Full cross-functional simulations |
-
----
-
-## License
-
-MIT
-
----
-
-## API Reference
-
-### Agent
+Der Soul Score berechnet sich aus den Big Five Traits:
 
 ```javascript
-import { Agent } from '@sparkcell/core';
-
-const agent = new Agent('my-agent', {
-  name: 'MyAgent',
-  role: 'developer',
-  bus: eventBus,
-  llm: llmClient,
-  toolRunner: toolRunner,
-});
-
-// Messaging
-const msgId = agent.sendTo('other-agent', 'Hello!');
-const helpId = agent.requestHelp('senior-agent', 'Need guidance on...');
-
-// Status
-const status = agent.getStatus();
-// { id, name, role, state, energy, currentTask, queueLength, cycleCount }
+soulScore = (
+  openness * 0.15 +
+  conscientiousness * 0.20 +
+  extraversion * 0.15 +
+  agreeableness * 0.20 +
+  (100 - neuroticism) * 0.30
+)
 ```
 
-### ProtectionSystem
+**Milestones:**
+- ☓ **Soul entstanden** (< 10)
+- ♥ **Soul gestärkt** (10-69)
+- ❤️ **SOUL-CHARGE** (>= 70)
 
-```javascript
-import { ProtectionSystem } from '@sparkcell/core';
+---
 
-const protection = new ProtectionSystem();
+## 🛠️ Tech Stack
 
-// Actions are recorded automatically by Agent
-// Manual check for custom scenarios:
-const violations = protection.check(agentId, {
-  skillLevels: currentSkills,
-  prevSkillLevels: previousSkills,
-  commitments: pendingTasks,
-  boostCount: energyBoosts,
-  memorySize: memoryCount,
-  agentState: currentState,
-  blockedActions: consecutiveBlocked,
-  helpRequested: isAskingForHelp,
-});
+| Kategorie | Technology |
+|-----------|------------|
+| Runtime | Node.js 18+ |
+| Module System | ESM (`"type": "module"`) |
+| UI Framework | React 18 + Ink v5 |
+| Testing | `node:test` |
+| File Locking | `proper-lockfile` |
+| LLM Support | OpenAI, Anthropic, Ollama, LM Studio, Mistral, Groq, Together AI, Perplexity, OpenRouter, Custom |
+
+---
+
+## 🔐 Sicherheit
+
+### Verschlüsselung
+- **AES-256-CBC** für Credentials
+- **macOS Keychain** oder **pbkdf2** Fallback (100k Iterationen)
+- **File Permissions**: 0o600 für sensible Dateien
+
+### API Key Protection
+- Automatische **Redaction** in Logs (`sk-***REDACTED***`)
+- Keine hardcoded Secrets im Code
+- Environment-based configuration
+
+### Protection System (7 Guards)
+1. **Loop Detection** - Endlose Zyklen erkennen
+2. **Skill Inflation** - Verhindert Skill-Bloat
+3. **Commitment Overload** - Max 10 pending Tasks
+4. **Isolation** - Verhindert Agenten-Inseln
+5. **Energy Exploit** - Verhindert Energie-Maximierung
+6. **Memory Overflow** - Max 500 Memory Einträge
+7. **Deadlock Detection** - Blockaden erkennen
+
+---
+
+## 📊 TUI Features
+
+Die Terminal UI zeigt in Echtzeit:
+- 🟢 **Agent States**: IDLE, WORKING, BLOCKED, PAUSED, COMPLETE, RESTED, HELP
+- ❤️ **Soul Score**: 0-100 mit Farbcodierung (red/magenta/gray hearts)
+- ⚡ **Skill Levels**: 12 Kategorien pro Agent
+- 🔋 **Energy**: 100% decay/recovery tracking
+- 📝 **Active Tasks**: Current task + queue length
+- 📚 **Memory Tiers**: HOT / WARM / COLD
+- 🧬 **Persönlichkeit**: Big Five Beschreibung pro Agent
+
+---
+
+## 📁 Projekt-Struktur
+
 ```
-
-### ToolRunner
-
-```javascript
-import { ToolRunner } from '@sparkcell/tools';
-import { ToolPermissions } from '@sparkcell/tools';
-
-const permissions = new ToolPermissions();
-const toolRunner = new ToolRunner({ permissions });
-
-// Register a custom tool
-toolRunner.registerTool({
-  name: 'myTool',
-  description: 'Does something useful',
-  parameters: { arg1: { type: 'string', description: 'Argument 1' } },
-  execute: async (args, context) => ({
-    success: true,
-    output: `Result: ${args.arg1}`,
-  }),
-  permissionLevel: 'open', // or 'restricted' or 'approval'
-});
-
-// Execute with context
-const result = await toolRunner.execute('agent-id', 'myTool', { arg1: 'value' }, {
-  workDir: '/path/to/workdir',
-  outputDir: '/path/to/output',
-});
+sparkcell/
+├── bin/
+│   └── sparkcell.js          # CLI Entry Point
+├── src/
+│   ├── core/                 # Core Engine
+│   │   ├── Agent.js          # Agent Klasse
+│   │   ├── Personality.js    # Big Five Persönlichkeit
+│   │   ├── SkillManager.js   # Skill System
+│   │   ├── EnergyManager.js  # Energie-Tracking
+│   │   ├── AgentMemory.js    # Memory Tiering
+│   │   ├── Metrics.js        # Performance Tracking
+│   │   └── ...
+│   ├── tools/                # Tool System
+│   │   ├── ToolRunner.js     # Tool Execution
+│   │   ├── ToolPermissions.js
+│   │   └── core/             # 26 Core Tools
+│   ├── communication/        # Agent Kommunikation
+│   │   ├── WorkerBus.js      # Event Bus
+│   │   ├── CommitmentProtocol.js
+│   │   └── AgentMessageBus.js
+│   ├── tui/                  # Terminal UI
+│   │   ├── App.js
+│   │   ├── components/       # Ink Components
+│   │   └── hooks/
+│   ├── llm/                  # LLM Integration
+│   │   ├── LLMManager.js
+│   │   ├── OpenAIProvider.js
+│   │   └── AnthropicProvider.js
+│   └── ...
+├── docs/                     # Dokumentation
+├── test/                     # Tests (420 Tests)
+└── README.md                 # This file
 ```
 
 ---
 
-### Metrics
-
-```javascript
-import { metrics } from '@sparkcell/core';
-
-// Record timing
-metrics.recordTiming('tool:execution', durationMs);
-metrics.recordEvent('agent:cycle');
-metrics.recordGauge('memory:heap', memUsage);
-
-// Get stats
-const stats = metrics.getStats('tool:execution');
-// { name, count, avg, min, max, last, total }
-
-// Get full system metrics
-const system = metrics.getSystemMetrics();
-// { uptime, memory, cpuUsage }
-```
-
----
-
-## Testing
+## 🧪 Testing
 
 ```bash
-# All tests
+# Alle Tests
 npm test
 
-# Unit tests only
+# Unit Tests
 npm run test:unit
 
-# Integration tests
+# Integration Tests
 npm run test:integration
 
-# Wizard tests
+# Wizard Tests
 npm run test:wizard
 
-# TUI tests
+# TUI Tests
 npm run test:tui
+
+# Mit Coverage
+npm run test:coverage
 ```
+
+**Test Status:** 420 Tests, alle grün ✅
+
+---
+
+## 📚 Dokumentation
+
+- [Tool Manifest Format](docs/TOOL-MANIFEST-FORMAT.md)
+- [Full Documentation](docs/superpowers/specs/2026-03-27-sparkcell-full-documentation.md)
+- [Website Design](docs/superpowers/specs/2026-03-27-sparkcell-website-design.md)
+
+---
+
+## 🤝 Contributing
+
+1. Fork das Repository
+2. Erstelle einen Branch (`git checkout -b feature/amazing-feature`)
+3. Commit deine Changes (`git commit -m 'feat: add amazing feature'`)
+4. Push zum Branch (`git push origin feature/amazing-feature`)
+5. Öffne einen Pull Request
+
+---
+
+## 📄 License
+
+MIT License - siehe [LICENSE](LICENSE) für Details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Model Context Protocol (MCP)** - 6400+ Tools
+- **OpenAI API** - GPT-4o Support
+- **Anthropic API** - Claude 3.5 Sonnet Support
+- **Ollama** - Lokale LLM Support
+
+---
+
+## 📞 Kontakt
+
+- GitHub: [@sparkcell](https://github.com/sparkcell)
+- License: MIT
+
+---
+
+**Built with ❤️ using React, Ink, and Node.js**
