@@ -1,0 +1,36 @@
+# Sensible Dateien
+.env
+.env.local
+.env.*.local
+*.key
+
+# Konfiguration mit Keys
+config*.json
+*.config.yaml
+*.config.json
+
+# Logs und Output
+logs/
+output/
+*.backup
+*.old
+
+# Node
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Session files
+.current-session
+.heartbeat
+.autonomous-progress.json
