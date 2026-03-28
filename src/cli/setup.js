@@ -2,7 +2,9 @@ import { ModelDetector } from '../llm/ModelDetector.js';
 import { PROVIDERS } from '../llm/ProviderRegistry.js';
 import { GlobalConfig } from '../config/GlobalConfig.js';
 import paths from '../utils/paths.js';
-import { banner, step, success, warn, info, dim, select, ask, askSecret, confirm } from './prompt.js';
+import { showLogoAnimated, showBox, showBulletList, step, success, warn, info, dim, select, ask, askSecret, confirm, showKeyboardShortcuts, proTip } from './prompt.js';
+import { Spinner } from './progress.js';
+import { THEME, ANSI } from './colors.js';
 
 const PROVIDER_MODELS = {
   ollama: ['llama3', 'mistral', 'codellama', 'gemma2'],
@@ -17,22 +19,38 @@ const PROVIDER_MODELS = {
 };
 
 export async function runSetup() {
-  banner('SparkCell v2.0 — Setup');
+  // Animated welcome
+  await showLogoAnimated(8);
+
+  showBox(`
+${THEME.primary}Willkommen bei SparkCell!${ANSI.reset}
+${THEME.textMuted}Multi-Agent Startup Framework${ANSI.reset}
+  `, { title: 'Setup', borderColor: THEME.primary });
+
+  console.log();
+  showBulletList([
+    '🤖 Multi-Agent System mit 5 Rollen',
+    '🧠 Big Five Persönlichkeitsmodell',
+    '⚡ 26+ Core Tools für echte Arbeit',
+    '📦 MCP Integration (6400+ Tools)',
+  ], THEME.secondary);
+  console.log();
 
   // Step 1: Detect local LLMs
-  step(1, 4, 'Lokale LLM-Server suchen...');
+  const detectSpinner = new Spinner('Lokale LLM-Server suchen...').start();
   const detector = new ModelDetector();
   let detected = [];
   try {
     detected = await detector.detect();
   } catch { /* ignore */ }
+  detectSpinner.stop(`${detected.length} Provider gefunden`);
 
   if (detected.length > 0) {
     for (const d of detected) {
       success(`${d.name} gefunden (Port ${d.port}) — ${d.models.length} Modelle`);
     }
   } else {
-    dim('  Keine lokalen Server gefunden.');
+    dim('  Keine lokalen Server gefunden. Installiere Ollama: https://ollama.ai');
   }
 
   // Step 2: Pick provider

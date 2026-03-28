@@ -4,19 +4,27 @@ import { PROVIDERS } from '../llm/ProviderRegistry.js';
 import { ModelDetector } from '../llm/ModelDetector.js';
 import { StartupSelector } from '../wizard/StartupSelector.js';
 import paths from '../utils/paths.js';
-import { banner, success, warn, error, info, dim } from './prompt.js';
+import { showBox, success, warn, error, info, dim } from './prompt.js';
+import { THEME, ANSI } from './colors.js';
 
 export async function runDoctor() {
-  banner('SparkCell Doctor');
+  // Premium health check banner
+  console.log();
+  console.log(`${THEME.primary}╔══════════════════╗${ANSI.reset}`);
+  console.log(`${THEME.primary}║${ANSI.reset}  ${ANSI.bold}SparkCell Doctor${ANSI.reset}  ${THEME.primary}║${ANSI.reset}`);
+  console.log(`${THEME.primary}╚══════════════════╝${ANSI.reset}`);
+  console.log();
+
   let issues = 0;
+  const checks = [];
 
   // 1. Node version
   const nodeVersion = process.version;
   const major = parseInt(nodeVersion.slice(1));
   if (major >= 18) {
-    success(`Node.js ${nodeVersion}`);
+    checks.push({ status: 'ok', message: `Node.js ${nodeVersion}` });
   } else {
-    error(`Node.js ${nodeVersion} — mindestens v18 nötig!`);
+    checks.push({ status: 'error', message: `Node.js ${nodeVersion} — mindestens v18 nötig!` });
     issues++;
   }
 
@@ -24,34 +32,33 @@ export async function runDoctor() {
   const home = paths.home();
   try {
     await fs.access(home);
-    success(`Home-Verzeichnis existiert: ${home}`);
+    checks.push({ status: 'ok', message: `Home-Verzeichnis existiert: ${home}` });
   } catch {
-    warn(`Home-Verzeichnis fehlt: ${home}`);
-    dim('  Wird beim ersten Start erstellt.');
+    checks.push({ status: 'warn', message: `Home-Verzeichnis fehlt: ${home}` });
   }
 
   // 3. Config
   const config = new GlobalConfig(paths.config());
   await config.load();
   if (config.needsSetup()) {
-    error('Keine LLM-Config gefunden — führe "sparkcell setup" aus');
+    checks.push({ status: 'error', message: 'Keine LLM-Config — führe "sparkcell setup" aus' });
     issues++;
   } else {
-    success(`Config geladen: ${paths.config()}`);
+    checks.push({ status: 'ok', message: `Config geladen: ${paths.config()}` });
     const primary = config.data.llm?.primary;
     if (primary) {
-      info(`  Provider: ${primary.provider}`);
-      info(`  Modell:   ${primary.model}`);
-      info(`  URL:      ${primary.baseUrl}`);
+      checks.push({ status: 'info', message: `  Provider: ${primary.provider}` });
+      checks.push({ status: 'info', message: `  Modell:   ${primary.model}` });
+      checks.push({ status: 'info', message: `  URL:      ${primary.baseUrl}` });
       if (primary.apiKey) {
-        success('  API-Key ist gesetzt');
+        checks.push({ status: 'ok', message: '  API-Key ist gesetzt' });
       } else {
         const providerInfo = PROVIDERS[primary.provider];
         if (providerInfo?.requiresKey) {
-          error('  API-Key fehlt! Setze ihn mit "sparkcell config set apikey <key>"');
+          checks.push({ status: 'error', message: '  API-Key fehlt! Setze mit "sparkcell config set apikey <key>"' });
           issues++;
         } else {
-          dim('  API-Key nicht nötig');
+          checks.push({ status: 'dim', message: '  API-Key nicht nötig' });
         }
       }
     }
@@ -68,13 +75,13 @@ export async function runDoctor() {
           headers: primary.apiKey ? { Authorization: `Bearer ${primary.apiKey}` } : {},
         });
         if (response.ok) {
-          success('LLM-Server erreichbar');
+          checks.push({ status: 'ok', message: 'LLM-Server erreichbar' });
         } else {
-          warn(`LLM-Server antwortet mit Status ${response.status}`);
+          checks.push({ status: 'warn', message: `LLM-Server antwortet mit Status ${response.status}` });
           issues++;
         }
       } catch {
-        error('LLM-Server nicht erreichbar!');
+        checks.push({ status: 'error', message: 'LLM-Server nicht erreichbar!' });
         issues++;
       }
     }
