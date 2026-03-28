@@ -19,10 +19,23 @@ export class AgentMemory {
   #agentId;
   #store = new Map();
   #maxEntries;
+  #lock = Promise.resolve();
 
   constructor(agentId, { maxEntries = DEFAULT_MAX_ENTRIES } = {}) {
     this.#agentId = agentId;
     this.#maxEntries = maxEntries;
+  }
+
+  async #withLock(fn) {
+    const previous = this.#lock;
+    let release;
+    this.#lock = new Promise(resolve => { release = resolve; });
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -31,32 +44,36 @@ export class AgentMemory {
    * @param {string} content
    * @param {object} metadata  - optional { tags: [], importance: '' }
    */
-  store(key, content, metadata = {}) {
-    const now = Date.now();
-    const existing = this.#store.get(key);
-    this.#store.set(key, {
-      content,
-      metadata,
-      accessCount: existing ? existing.accessCount : 0,
-      lastAccess:  existing ? existing.lastAccess  : now,
-      createdAt:   existing ? existing.createdAt   : now,
-    });
+  async store(key, content, metadata = {}) {
+    return this.#withLock(() => {
+      const now = Date.now();
+      const existing = this.#store.get(key);
+      this.#store.set(key, {
+        content,
+        metadata,
+        accessCount: existing ? existing.accessCount : 0,
+        lastAccess:  existing ? existing.lastAccess  : now,
+        createdAt:   existing ? existing.createdAt   : now,
+      });
 
-    if (this.#store.size > this.#maxEntries) {
-      this.#evict();
-    }
+      if (this.#store.size > this.#maxEntries) {
+        this.#evict();
+      }
+    });
   }
 
   /**
    * Retrieve a memory entry by exact key, updating access stats.
    * Returns null if not found.
    */
-  recall(key) {
-    const entry = this.#store.get(key);
-    if (!entry) return null;
-    entry.accessCount += 1;
-    entry.lastAccess = Date.now();
-    return { key, ...entry };
+  async recall(key) {
+    return this.#withLock(() => {
+      const entry = this.#store.get(key);
+      if (!entry) return null;
+      entry.accessCount += 1;
+      entry.lastAccess = Date.now();
+      return { key, ...entry };
+    });
   }
 
   /**
