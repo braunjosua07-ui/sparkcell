@@ -6,7 +6,17 @@ export const ENFORCEMENT_STATES = {
   ENFORCING: 'ENFORCING',
 };
 
+// Extended transitions for enforcement states
+const ENFORCEMENT_TRANSITIONS = {
+  ...STATES,
+  // Allow validate event from any state to enter VALIDATING
+  VALIDATING: { validationComplete: STATES.IDLE, violationsFound: 'ENFORCING' },
+  ENFORCING: { enforcementComplete: STATES.IDLE },
+};
+
 export class EnforcementStateMachine extends StateMachine {
+  #enforcementPreviousState;
+
   constructor(agentId, options = {}) {
     super(agentId, options);
     this.enforcementRules = options.rules || [];
@@ -14,7 +24,12 @@ export class EnforcementStateMachine extends StateMachine {
 
   async validateAction(action) {
     const previousState = this.currentState;
+    this.#enforcementPreviousState = previousState;
+
+    // Use proper transition mechanism for entering VALIDATING
     this.currentState = ENFORCEMENT_STATES.VALIDATING;
+    this.history.push({ from: previousState, to: ENFORCEMENT_STATES.VALIDATING, event: 'validate', timestamp: Date.now() });
+    if (this.history.length > 100) this.history.shift();
     this.emit('state-change', {
       from: previousState,
       to: ENFORCEMENT_STATES.VALIDATING,
@@ -30,18 +45,24 @@ export class EnforcementStateMachine extends StateMachine {
     }
 
     if (violations.length > 0) {
+      // Transition to ENFORCING state
+      const fromValidating = this.currentState;
       this.currentState = ENFORCEMENT_STATES.ENFORCING;
+      this.history.push({ from: fromValidating, to: ENFORCEMENT_STATES.ENFORCING, event: 'violations-found', timestamp: Date.now() });
       this.emit('state-change', {
         from: ENFORCEMENT_STATES.VALIDATING,
         to: ENFORCEMENT_STATES.ENFORCING,
         event: 'violations-found',
         agentId: this.agentId,
       });
+
       // Restore to previous state after enforcement
-      this.currentState = previousState;
+      const fromEnforcing = this.currentState;
+      this.currentState = this.#enforcementPreviousState;
+      this.history.push({ from: fromEnforcing, to: this.#enforcementPreviousState, event: 'enforcement-complete', timestamp: Date.now() });
       this.emit('state-change', {
         from: ENFORCEMENT_STATES.ENFORCING,
-        to: previousState,
+        to: this.#enforcementPreviousState,
         event: 'enforcement-complete',
         agentId: this.agentId,
       });
@@ -49,10 +70,12 @@ export class EnforcementStateMachine extends StateMachine {
     }
 
     // Restore to previous state after clean validation
-    this.currentState = previousState;
+    const fromValidating = this.currentState;
+    this.currentState = this.#enforcementPreviousState;
+    this.history.push({ from: fromValidating, to: this.#enforcementPreviousState, event: 'validation-passed', timestamp: Date.now() });
     this.emit('state-change', {
       from: ENFORCEMENT_STATES.VALIDATING,
-      to: previousState,
+      to: this.#enforcementPreviousState,
       event: 'validation-passed',
       agentId: this.agentId,
     });

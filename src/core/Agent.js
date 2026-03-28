@@ -168,36 +168,40 @@ export class Agent extends EventEmitter {
   async runLoop() {
     if (this.#working) return; // skip if previous LLM call still running
     this.#working = true; // Set immediately to prevent TOCTOU race condition
-    const cycleStart = performance.now();
-    this.#cycleCount++;
+    try {
+      const cycleStart = performance.now();
+      this.#cycleCount++;
 
-    // Protection check before each cycle
-    const violations = this.#runProtectionCheck();
-    if (violations.length > 0 && this.#bus) {
-      this.#bus.publish('agent:protection-violation', {
-        agentId: this.id, agentName: this.name, violations,
-      });
+      // Protection check before each cycle
+      const violations = this.#runProtectionCheck();
+      if (violations.length > 0 && this.#bus) {
+        this.#bus.publish('agent:protection-violation', {
+          agentId: this.id, agentName: this.name, violations,
+        });
+      }
+
+      // Persist protection storage state after each cycle
+      await this.#protection.saveToStorage(this.id);
+
+      // Track blocked cycles for deadlock detection
+      if (this.state === STATES.BLOCKED) this.#blockedCycles++;
+      else this.#blockedCycles = 0;
+
+      switch (this.state) {
+        case STATES.IDLE:     await this.#handleIdle();    break;
+        case STATES.WORKING:  await this.#handleWorking(); break;
+        case STATES.BLOCKED:  await this.#handleBlocked(); break;
+        case STATES.PAUSED:   await this.#handlePaused();  break;
+        case STATES.COMPLETE: this.stateMachine.transition('auto'); break;
+        case STATES.RESTED:   this.stateMachine.transition('auto'); break;
+        case STATES.HELP:     break;
+      }
+      this.emit('cycle', { id: this.id, cycle: this.#cycleCount, state: this.state, energy: this.energy.energy });
+      this.#metrics.recordTiming('agent:cycleDuration', performance.now() - cycleStart);
+      this.#metrics.recordEvent('agent:cycleCount');
+    } finally {
+      this.#working = false;
     }
-
-    // Persist protection storage state after each cycle
-    await this.#protection.saveToStorage(this.id);
-
-    // Track blocked cycles for deadlock detection
-    if (this.state === STATES.BLOCKED) this.#blockedCycles++;
-    else this.#blockedCycles = 0;
-
-    switch (this.state) {
-      case STATES.IDLE:     await this.#handleIdle();    break;
-      case STATES.WORKING:  await this.#handleWorking(); break;
-      case STATES.BLOCKED:  await this.#handleBlocked(); break;
-      case STATES.PAUSED:   await this.#handlePaused();  break;
-      case STATES.COMPLETE: this.stateMachine.transition('auto'); break;
-      case STATES.RESTED:   this.stateMachine.transition('auto'); break;
-      case STATES.HELP:     break;
-    }
-    this.emit('cycle', { id: this.id, cycle: this.#cycleCount, state: this.state, energy: this.energy.energy });
-    this.#metrics.recordTiming('agent:cycleDuration', performance.now() - cycleStart);
-    this.#metrics.recordEvent('agent:cycleCount');
   }
 
   #runProtectionCheck() {
@@ -751,7 +755,8 @@ export class Agent extends EventEmitter {
 
   assignTask(task) {
     if (this.#taskQueue.length >= 200) {
-      this.#taskQueue.shift(); // drop oldest to stay within limit
+      const dropped = this.#taskQueue.shift();
+      this.emit('task-dropped', { task: dropped, reason: 'queue-full' });
     }
     this.#taskQueue.push(task);
   }

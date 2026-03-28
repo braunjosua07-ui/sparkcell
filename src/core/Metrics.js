@@ -141,6 +141,8 @@ export class Metrics {
 
   /**
    * Get rate metrics (events per second, etc.).
+   * NOTE: This method only works correctly for gauge metrics where values represent timestamps.
+   * For timing/event metrics, use getStats() instead.
    * @param {string} name - Metric name
    * @returns {object|null} Rate stats or null
    */

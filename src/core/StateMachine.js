@@ -46,6 +46,7 @@ export class StateMachine extends EventEmitter {
     if (this.history.length > this.#maxHistory) this.history.shift();
 
     this.currentState = to;
+    this.#stateTimers.clear();
     this.#stateTimers.set(to, Date.now());
 
     // Fire callbacks

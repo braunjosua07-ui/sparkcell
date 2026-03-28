@@ -25,6 +25,7 @@ export class AgentMessageBus {
   #bus;
   #pendingMessages = new Map();
   #messageIdCounter = 0;
+  #cleanupInterval;
 
   /**
    * Create an AgentMessageBus.
@@ -32,6 +33,15 @@ export class AgentMessageBus {
    */
   constructor(bus) {
     this.#bus = bus;
+    // Start TTL cleanup interval (every 5 minutes)
+    this.#cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [id, msg] of this.#pendingMessages) {
+        if (now - msg.timestamp > 3600000) { // 1 hour TTL
+          this.#pendingMessages.delete(id);
+        }
+      }
+    }, 300000);
   }
 
   /**
@@ -170,5 +180,24 @@ export class AgentMessageBus {
       pendingMessages: this.#pendingMessages.size,
       messageIdCounter: this.#messageIdCounter,
     };
+  }
+
+  /**
+   * Acknowledge a message, removing it from pending messages.
+   * @param {string} messageId - The message ID to acknowledge
+   */
+  acknowledge(messageId) {
+    this.#pendingMessages.delete(messageId);
+  }
+
+  /**
+   * Stop the cleanup interval and release resources.
+   */
+  destroy() {
+    if (this.#cleanupInterval) {
+      clearInterval(this.#cleanupInterval);
+      this.#cleanupInterval = null;
+    }
+    this.#pendingMessages.clear();
   }
 }

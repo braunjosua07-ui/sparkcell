@@ -1,10 +1,5 @@
 // src/core/TaskGenerator.js
 
-let _taskCounter = 0;
-function nextId() {
-  return `task-${++_taskCounter}`;
-}
-
 /**
  * Expanded role task pools — agents cycle through these, never repeating.
  */
@@ -93,6 +88,11 @@ export class TaskGenerator {
   #config;
   #completedTitles = new Set(); // Track completed task titles to avoid repeats
   #roleTaskIndex = 0; // Current position in role task pool
+  #counter = 0;
+
+  #nextId() {
+    return `task-${this.#agentId}-${++this.#counter}`;
+  }
 
   constructor(agentId, role, config = {}) {
     this.#agentId = agentId;
@@ -138,7 +138,7 @@ export class TaskGenerator {
       const def = roleDefs[idx];
       if (this.#completedTitles.has(def.title)) continue;
       tasks.push({
-        id: nextId(),
+        id: this.#nextId(),
         title: def.title,
         description: def.description,
         priority: def.priority,
@@ -157,7 +157,7 @@ export class TaskGenerator {
       .filter(s => !this.#completedTitles.has(`Develop ${s} skill`))
       .slice(0, this.#config.maxTasksPerSource)
       .map(skill => ({
-        id: nextId(),
+        id: this.#nextId(),
         title: `Develop ${skill} skill`,
         description: `Practice and improve ${skill} through focused study and application.`,
         priority: 'medium',
@@ -170,7 +170,7 @@ export class TaskGenerator {
       .filter(g => !this.#completedTitles.has(`Advance: ${g}`))
       .slice(0, 2) // max 2 mission tasks at once
       .map(goal => ({
-        id: nextId(),
+        id: this.#nextId(),
         title: `Advance: ${goal}`,
         description: `As ${this.#role}, identify and execute concrete actions that contribute to: "${goal}". Produce a deliverable.`,
         priority: 'high',
