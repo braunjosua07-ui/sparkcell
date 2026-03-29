@@ -18,6 +18,7 @@ import { createSandboxedTool } from './tools/meta/CreateToolTool.js';
 import { BrowserManager } from './tools/BrowserManager.js';
 import { CredentialStore } from './core/CredentialStore.js';
 import { MCPBridge } from './mcp/MCPBridge.js';
+import { SelfImprover } from './core/SelfImprover.js';
 
 export class SparkCell extends EventEmitter {
   #startupName;
@@ -33,6 +34,7 @@ export class SparkCell extends EventEmitter {
   #browserManager;
   #credentialStore;
   #mcpBridge;
+  #selfImprover;
   #intervals = [];
   #running = false;
   #paused = false;
@@ -45,6 +47,7 @@ export class SparkCell extends EventEmitter {
     this.#startupName = startupName;
     this.#config = config;
     this.#bus = new WorkerBus();
+    this.#selfImprover = new SelfImprover(this.#bus);
     this.#protocol = new CommitmentProtocol();
     this.#whiteboard = new SharedWhiteboard();
     this.#pauseRoom = new PauseRoom();
@@ -205,6 +208,8 @@ export class SparkCell extends EventEmitter {
         discordWebhook: startupConfig.discordWebhook || null,
         workDir,
         customToolsDir: path.join(workDir, 'custom-tools'),
+        selfImprover: this.#selfImprover,
+        contextWindowTokens: this.#config.contextWindowTokens || 8192,
       });
       this.#agents.set(agentConfig.id, agent);
     }
@@ -260,6 +265,9 @@ export class SparkCell extends EventEmitter {
       this.#intervals.push(interval);
     }
 
+    // Overnight health monitor — checks RAM & CPU every 60s, auto-pauses on overload
+    this.#startHealthMonitor();
+
     // Setup signal handlers
     const shutdownHandler = async () => {
       await this.shutdown();
@@ -275,6 +283,62 @@ export class SparkCell extends EventEmitter {
 
     this.#logger.info(`Started ${this.#startupName} with ${this.#agents.size} agents`);
     this.emit('started', { agents: this.#agents.size, tickRate });
+  }
+
+  #startHealthMonitor() {
+    const CHECK_INTERVAL = 60_000; // every 60s
+    const RAM_WARN_MB    = this.#config.ramWarnMb  ?? 1500; // warn above this  (~18% of 8GB)
+    const RAM_PAUSE_MB   = this.#config.ramPauseMb ?? 3000; // pause agents      (~37% of 8GB)
+    const RAM_KILL_MB    = this.#config.ramKillMb  ?? 5000; // hard stop         (~62% of 8GB)
+
+    let pausedByHealth = false;
+
+    const monitor = setInterval(() => {
+      const mem = process.memoryUsage();
+      const heapMB = Math.round(mem.heapUsed / 1024 / 1024);
+      const rssMB  = Math.round(mem.rss      / 1024 / 1024);
+
+      this.emit('health', { heapMB, rssMB, pausedByHealth });
+
+      if (rssMB >= RAM_KILL_MB) {
+        this.#logger.warn(`[HEALTH] RSS ${rssMB}MB >= kill threshold ${RAM_KILL_MB}MB — shutting down`);
+        this.emit('health:critical', { rssMB, reason: 'RAM kill threshold reached' });
+        clearInterval(monitor);
+        this.shutdown().then(() => process.exit(1));
+        return;
+      }
+
+      if (rssMB >= RAM_PAUSE_MB && !pausedByHealth) {
+        this.#logger.warn(`[HEALTH] RSS ${rssMB}MB >= pause threshold ${RAM_PAUSE_MB}MB — pausing agents`);
+        this.#paused = true;
+        pausedByHealth = true;
+        this.emit('health:paused', { rssMB });
+
+        // Try to free memory by running GC if exposed
+        if (global.gc) global.gc();
+
+        // Auto-resume after 2 minutes to check again
+        setTimeout(() => {
+          const after = Math.round(process.memoryUsage().rss / 1024 / 1024);
+          if (after < RAM_PAUSE_MB) {
+            this.#logger.info(`[HEALTH] RAM back to ${after}MB — resuming agents`);
+            this.#paused = false;
+            pausedByHealth = false;
+            this.emit('health:resumed', { rssMB: after });
+          } else {
+            this.#logger.warn(`[HEALTH] RAM still high (${after}MB) — staying paused`);
+          }
+        }, 120_000);
+        return;
+      }
+
+      if (rssMB >= RAM_WARN_MB) {
+        this.#logger.warn(`[HEALTH] RAM at ${rssMB}MB (warn threshold: ${RAM_WARN_MB}MB)`);
+        this.emit('health:warning', { rssMB });
+      }
+    }, CHECK_INTERVAL);
+
+    this.#intervals.push(monitor);
   }
 
   async shutdown() {
@@ -372,13 +436,21 @@ export class SparkCell extends EventEmitter {
   }
 
   getStatus() {
+    const mem = process.memoryUsage();
     return {
       startup: this.#startupName,
       running: this.#running,
       paused: this.#paused,
       uptime: this.uptime,
+      health: {
+        heapMB: Math.round(mem.heapUsed / 1024 / 1024),
+        rssMB:  Math.round(mem.rss      / 1024 / 1024),
+      },
       agents: this.agents.map(a => a.getStatus()),
       mcp: this.#mcpBridge ? this.#mcpBridge.getStatus() : null,
+      selfImprover: this.#selfImprover ? this.#selfImprover.getSystemReport() : null,
     };
   }
+
+  get selfImprover() { return this.#selfImprover; }
 }

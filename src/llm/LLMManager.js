@@ -38,6 +38,7 @@ export class LLMManager {
         apiKey: providerConfig.apiKey,
         model: providerConfig.model,
         name: registry?.name || providerConfig.provider,
+        supportsToolUse: registry?.supportsToolUse,
       }));
     }
   }
@@ -87,17 +88,53 @@ export class LLMManager {
       if (this._isCircuitOpen(name)) continue;
       try {
         const provider = this.#providers.get(name);
+        const needsFallback = options.tools && !provider.supportsToolUse;
+
+        let streamPrompt = prompt;
+        let streamOptions = options;
+
+        if (needsFallback) {
+          // Inject tools as text instructions for models without native tool-use
+          const messages = typeof prompt === 'string'
+            ? [{ role: 'user', content: prompt }]
+            : prompt;
+          streamPrompt = injectToolsAsText(messages, options.tools);
+          streamOptions = { ...options, tools: undefined };
+        }
+
         if (typeof provider.queryStream !== 'function') {
           // Fallback to non-streaming query
-          const result = await provider.query(prompt, options);
+          const result = await provider.query(streamPrompt, streamOptions);
           if (!result.toolCalls) result.toolCalls = [];
-          yield { type: 'token', text: result.content };
-          yield { type: 'done', ...result };
+
+          if (needsFallback && result.content) {
+            const { cleanContent, toolCalls } = parseToolCallsFromText(result.content);
+            yield { type: 'token', text: cleanContent };
+            yield { type: 'done', content: cleanContent, toolCalls, usage: result.usage };
+          } else {
+            yield { type: 'token', text: result.content };
+            yield { type: 'done', ...result };
+          }
           this._recordSuccess(name);
           return;
         }
-        for await (const chunk of provider.queryStream(prompt, options)) {
-          yield chunk;
+
+        // Collect stream output to parse tool calls from text if needed
+        let fullContent = '';
+        for await (const chunk of provider.queryStream(streamPrompt, streamOptions)) {
+          if (needsFallback) {
+            // Buffer content for text-based tool call parsing
+            if (chunk.type === 'token') {
+              fullContent += chunk.text;
+              yield chunk; // still stream tokens to UI
+            } else if (chunk.type === 'done') {
+              const finalContent = chunk.content || fullContent;
+              const { cleanContent, toolCalls } = parseToolCallsFromText(finalContent);
+              yield { type: 'done', content: cleanContent, toolCalls, usage: chunk.usage || {} };
+            }
+          } else {
+            yield chunk;
+          }
         }
         this._recordSuccess(name);
         return;

@@ -118,7 +118,10 @@ function skillBar(level, width = 8) {
 }
 
 export function AgentsView({ sparkCell }) {
-  const agents = sparkCell?.agents || [];
+  // Use getStatus() to get computed properties (soulScore, personalityTraits, etc.)
+  const agents = (sparkCell?.agents || []).map(a =>
+    typeof a.getStatus === 'function' ? { ...a.getStatus(), skills: a.skills } : a
+  );
 
   // Empty state
   if (agents.length === 0) {
@@ -144,7 +147,7 @@ export function AgentsView({ sparkCell }) {
     ...agents.map(agent => {
       const stateStyle = STATE_STYLES[agent.state] || STATE_STYLES.IDLE;
       const roleColor = ROLE_COLORS[agent.role] || THEME.primary;
-      const eBar = energyBar(agent.energy || 0);
+      const eBar = energyBar(typeof agent.energy === 'number' ? agent.energy : agent.energy?.energy ?? 0);
       const soulScore = agent.soulScore || agent.personalitySoulScore || 0;
       const soul = soulBadge(soulScore);
       const personality = personalityDescription(agent.personalityTraits);
@@ -202,7 +205,7 @@ export function AgentsView({ sparkCell }) {
             return React.createElement(
               Text,
               { key: i, color: sb.color },
-              `${name} ${sb.bar} ${data.level}`,
+              `${name} ${sb.bar} ${Math.round(data.level)}`,
             );
           }),
         ),

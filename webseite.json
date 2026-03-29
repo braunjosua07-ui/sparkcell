@@ -1,0 +1,492 @@
+[
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774783589682
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783595663
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774783599700
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783609796
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774783614705
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783624982
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774783629707
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783639811
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774783644728
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783657209
+  },
+  {
+    "actionType": "work",
+    "target": "Build design system",
+    "timestamp": 1774783759766
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"mkdir -p design-system/{tokens,components,guidelines,assets}\"}",
+    "timestamp": 1774783768027
+  },
+  {
+    "actionType": "work",
+    "target": "Build design system",
+    "timestamp": 1774783769765
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783784312
+  },
+  {
+    "actionType": "work",
+    "target": "Build design system",
+    "timestamp": 1774783784767
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783800225
+  },
+  {
+    "actionType": "work",
+    "target": "Build design system",
+    "timestamp": 1774783804771
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783813475
+  },
+  {
+    "actionType": "work",
+    "target": "Build design system",
+    "timestamp": 1774783814770
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783818271
+  },
+  {
+    "actionType": "work",
+    "target": "Conduct user research",
+    "timestamp": 1774783919786
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783937367
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783937376
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774783937383
+  },
+  {
+    "actionType": "work",
+    "target": "Conduct user research",
+    "timestamp": 1774783939793
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774783953255
+  },
+  {
+    "actionType": "tool:webFetch",
+    "target": "{\"url\":\"https://www.reddit.com/r/LocalLLaMA/top/?t=month\"}",
+    "timestamp": 1774783953289
+  },
+  {
+    "actionType": "work",
+    "target": "Conduct user research",
+    "timestamp": 1774783954800
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783966487
+  },
+  {
+    "actionType": "work",
+    "target": "Conduct user research",
+    "timestamp": 1774783969805
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783976425
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783976456
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774783976478
+  },
+  {
+    "actionType": "work",
+    "target": "Conduct user research",
+    "timestamp": 1774783979809
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783984324
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*research*\"}",
+    "timestamp": 1774783984339
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\",\"description\":\"List current directory contents\"}",
+    "timestamp": 1774783984349
+  },
+  {
+    "actionType": "work",
+    "target": "Design landing page",
+    "timestamp": 1774784084839
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784088765
+  },
+  {
+    "actionType": "work",
+    "target": "Design landing page",
+    "timestamp": 1774784089848
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784094067
+  },
+  {
+    "actionType": "work",
+    "target": "Design landing page",
+    "timestamp": 1774784094846
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784097917
+  },
+  {
+    "actionType": "work",
+    "target": "Design onboarding flow",
+    "timestamp": 1774784129857
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784133800
+  },
+  {
+    "actionType": "work",
+    "target": "Design onboarding flow",
+    "timestamp": 1774784134859
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784141280
+  },
+  {
+    "actionType": "work",
+    "target": "Design onboarding flow",
+    "timestamp": 1774784144858
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784148695
+  },
+  {
+    "actionType": "work",
+    "target": "Design onboarding flow",
+    "timestamp": 1774784149855
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784152527
+  },
+  {
+    "actionType": "work",
+    "target": "Design onboarding flow",
+    "timestamp": 1774784154859
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784168043
+  },
+  {
+    "actionType": "work",
+    "target": "Create icon and illustration set",
+    "timestamp": 1774784269903
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784274820
+  },
+  {
+    "actionType": "work",
+    "target": "Create icon and illustration set",
+    "timestamp": 1774784274902
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784277699
+  },
+  {
+    "actionType": "work",
+    "target": "Create icon and illustration set",
+    "timestamp": 1774784279902
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784283604
+  },
+  {
+    "actionType": "work",
+    "target": "Create icon and illustration set",
+    "timestamp": 1774784284906
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{svg,png,jpg,html,css}\"}",
+    "timestamp": 1774784292401
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/design/**\"}",
+    "timestamp": 1774784292421
+  },
+  {
+    "actionType": "work",
+    "target": "Create icon and illustration set",
+    "timestamp": 1774784294902
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784300310
+  },
+  {
+    "actionType": "work",
+    "target": "Design mobile responsive layouts",
+    "timestamp": 1774784404963
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784407614
+  },
+  {
+    "actionType": "work",
+    "target": "Design mobile responsive layouts",
+    "timestamp": 1774784409960
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{html,css,scss,js,jsx,tsx,vue}\"}",
+    "timestamp": 1774784413886
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{png,jpg,svg,fig,sketch}\"}",
+    "timestamp": 1774784413910
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{md,txt}\"}",
+    "timestamp": 1774784413919
+  },
+  {
+    "actionType": "work",
+    "target": "Design mobile responsive layouts",
+    "timestamp": 1774784414959
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{html,css,js}\"}",
+    "timestamp": 1774784419986
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784420001
+  },
+  {
+    "actionType": "work",
+    "target": "Design mobile responsive layouts",
+    "timestamp": 1774784424962
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{html,css,js,scss,sass}\"}",
+    "timestamp": 1774784452322
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/design/**/*\"}",
+    "timestamp": 1774784452337
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.{json,md}\"}",
+    "timestamp": 1774784452345
+  },
+  {
+    "actionType": "work",
+    "target": "Create prototype",
+    "timestamp": 1774784484982
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784500946
+  },
+  {
+    "actionType": "work",
+    "target": "Create prototype",
+    "timestamp": 1774784505007
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784519776
+  },
+  {
+    "actionType": "work",
+    "target": "Create prototype",
+    "timestamp": 1774784520007
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784525462
+  },
+  {
+    "actionType": "work",
+    "target": "Create prototype",
+    "timestamp": 1774784530021
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784533570
+  },
+  {
+    "actionType": "work",
+    "target": "Create prototype",
+    "timestamp": 1774784535017
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784545839
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784545847
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774784650044
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784671249
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774784675060
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784679412
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774784680063
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784684438
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774784685059
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784689630
+  },
+  {
+    "actionType": "work",
+    "target": "Create wireframes",
+    "timestamp": 1774784690067
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784694921
+  }
+]

@@ -1,0 +1,562 @@
+[
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783589667
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783597962
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783597981
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774783597988
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783599671
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783607071
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783607095
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774783607111
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783609671
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783613713
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783614671
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783617949
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/responsibilities*\"}",
+    "timestamp": 1774783617980
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/team*\"}",
+    "timestamp": 1774783617999
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783619670
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783634193
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783634217
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\",\"description\":\"List all files in working directory\"}",
+    "timestamp": 1774783634235
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783734721
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"sprint-goals.md\",\"content\":\"# Sprint-Ziele - Implementer\\n\\n## Kontext\\n**Mission:** Hardwa",
+    "timestamp": 1774783747263
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783749723
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783753258
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783753277
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783754724
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*sprint*\"}",
+    "timestamp": 1774783780899
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*goal*\"}",
+    "timestamp": 1774783780907
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/docs/**/*.md\"}",
+    "timestamp": 1774783780913
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783784731
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783792471
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"*.md\"}",
+    "timestamp": 1774783792480
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783792492
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783794743
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"personal-goals-sprint.md\",\"content\":\"# Persönliche Sprint-Ziele\\n\\n## Kontext\\n- **Rolle:**",
+    "timestamp": 1774783805521
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783909757
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783914705
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783914758
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783925016
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783929760
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774783936391
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783936416
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783936423
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783939762
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783945152
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"pwd\"}",
+    "timestamp": 1774783945167
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783949769
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783959018
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784059794
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784069695
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784069716
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784069723
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784069793
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784073427
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784073438
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784073447
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784074796
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784079241
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784079260
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784079267
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784109802
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784115037
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784115064
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784115074
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784119802
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784140217
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784144828
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"sprint-goals.md\",\"content\":\"# Sprint-Ziele - Implementer (Entwickler)\\n\\n## Kontext\\n- **Mi",
+    "timestamp": 1774784198226
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784199825
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784204745
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784204777
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784204790
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784204822
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784208076
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784309866
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784321613
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784324865
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"pwd && ls -la\"}",
+    "timestamp": 1774784335894
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784335922
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784339868
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784343815
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784343850
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784343863
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784344871
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784355401
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784359874
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784369434
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"pwd\"}",
+    "timestamp": 1774784369452
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784469900
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784478154
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/responsibilities*\"}",
+    "timestamp": 1774784478175
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784479900
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"responsibilities_implementer.md\",\"content\":\"# Verantwortlichkeiten & Deliverables - Impleme",
+    "timestamp": 1774784495966
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784499927
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784510573
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*responsibility*\"}",
+    "timestamp": 1774784510580
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*role*\"}",
+    "timestamp": 1774784510587
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784514932
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784524292
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784554954
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784557608
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784559961
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784565882
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784569958
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784587148
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784587169
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784587177
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784589972
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"sprint-goals.md\",\"content\":\"# Sprint-Ziele (Implementer)\\n\\n## Sprint-Dauer: 2 Wochen\\n\\n##",
+    "timestamp": 1774784610593
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784614990
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"sprint-goals.md\",\"content\":\"# Sprint-Ziele - Entwickler (Implementer)\\n\\n**Sprint-Zeitraum:",
+    "timestamp": 1774784644889
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784745006
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784748388
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784750013
+  }
+]

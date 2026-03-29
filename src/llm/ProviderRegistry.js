@@ -1,6 +1,6 @@
 export const PROVIDERS = {
-  ollama:     { name: 'Ollama (Local)',    baseUrl: 'http://localhost:11434/v1', requiresKey: false },
-  lmstudio:   { name: 'LM Studio (Local)', baseUrl: 'http://localhost:1234/v1',  requiresKey: false },
+  ollama:     { name: 'Ollama (Local)',    baseUrl: 'http://localhost:11434/v1', requiresKey: false, supportsToolUse: false },
+  lmstudio:   { name: 'LM Studio (Local)', baseUrl: 'http://localhost:1234/v1',  requiresKey: false, supportsToolUse: false },
   openai:     { name: 'OpenAI',            baseUrl: 'https://api.openai.com/v1', requiresKey: true },
   anthropic:  { name: 'Anthropic',         baseUrl: 'https://api.anthropic.com', requiresKey: true, isAnthropic: true },
   openrouter: { name: 'OpenRouter',        baseUrl: 'https://openrouter.ai/api/v1', requiresKey: true },

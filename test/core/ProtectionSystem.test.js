@@ -72,7 +72,7 @@ describe('ProtectionSystem', () => {
   // ── Isolation guard ────────────────────────────────────────────────────
   it('detects isolation (no comm events in window)', () => {
     const ps = new ProtectionSystem();
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 50; i++) {
       ps.recordAction('agent-1', 'write', `file${i}.md`);
     }
     const violations = ps.check('agent-1');

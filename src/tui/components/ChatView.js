@@ -2,6 +2,39 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useFeed } from '../hooks/useFeed.js';
+import { THEME } from '../../cli/colors.js';
+
+// Ink-compatible colors
+const COLORS = {
+  user: 'green',
+  agent: 'magenta',
+  system: 'gray',
+  error: 'red',
+  success: 'green',
+  timestamp: 'gray',
+  border: 'cyan',
+};
+
+// Format timestamp for messages
+function formatTime(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Format relative time
+function formatRelative(date) {
+  if (!date) return 'just now';
+  const diff = Date.now() - date;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 /**
  * ChatView — User can interact with agents during runtime.
@@ -138,63 +171,75 @@ export function ChatView({ sparkCell }) {
     .slice(-5);
 
   return React.createElement(Box, { flexDirection: 'column', height: '100%' },
-    React.createElement(Text, { bold: true, color: 'cyan' }, 'Team Chat'),
-    React.createElement(Text, null, ''),
+    // Header with timestamp
+    React.createElement(
+      Box,
+      { gap: 2, marginBottom: 1 },
+      React.createElement(Text, { bold: true, color: COLORS.border }, '💬 Team Chat'),
+      React.createElement(Text, { dimColor: true }, `— ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`),
+    ),
 
     // Messages area
     React.createElement(Box, { flexDirection: 'column', flexGrow: 1 },
       ...messages.slice(-15).map((msg, i) => {
+        const timestamp = msg.timestamp ? formatRelative(msg.timestamp) : '';
+        const timeStr = timestamp ? `[${timestamp}] ` : '';
+
         switch (msg.type) {
           case 'user':
             return React.createElement(Box, { key: `m-${i}`, gap: 1 },
-              React.createElement(Text, { color: 'green', bold: true }, 'Du:'),
+              React.createElement(Text, { dimColor: true }, timeStr),
+              React.createElement(Text, { color: COLORS.user, bold: true }, 'Du:'),
               React.createElement(Text, { wrap: 'truncate' }, msg.text),
             );
           case 'system':
             return React.createElement(Box, { key: `m-${i}` },
-              React.createElement(Text, { dimColor: true }, `  ${msg.text}`),
+              React.createElement(Text, { dimColor: true }, `  ${timeStr}${msg.text}`),
             );
           case 'response':
             return React.createElement(Box, { key: `m-${i}`, gap: 1 },
-              React.createElement(Text, { color: 'magenta', bold: true }, `${msg.agent}:`),
+              React.createElement(Text, { dimColor: true }, timeStr),
+              React.createElement(Text, { color: COLORS.agent, bold: true }, `${msg.agent}:`),
               React.createElement(Text, { wrap: 'truncate' }, msg.text),
             );
           case 'error':
             return React.createElement(Box, { key: `m-${i}` },
-              React.createElement(Text, { color: 'red' }, `  ${msg.text}`),
+              React.createElement(Text, { color: COLORS.error }, `  ${timeStr}${msg.text}`),
             );
           case 'success':
             return React.createElement(Box, { key: `m-${i}` },
-              React.createElement(Text, { color: 'green' }, `  ${msg.text}`),
+              React.createElement(Text, { color: COLORS.success }, `  ${timeStr}${msg.text}`),
             );
           default:
             return React.createElement(Box, { key: `m-${i}` },
-              React.createElement(Text, null, `  ${msg.text}`),
+              React.createElement(Text, null, `  ${timeStr}${msg.text}`),
             );
         }
       }),
 
-      // Show recent agent activity
+      // Show recent agent activity with timestamps
       recentAgentOutputs.length > 0
-        ? React.createElement(Box, { flexDirection: 'column', marginTop: 1 },
-            React.createElement(Text, { dimColor: true }, '--- Letzte Agent-Aktivitaet ---'),
-            ...recentAgentOutputs.map((e, i) =>
-              React.createElement(Box, { key: `a-${i}`, gap: 1 },
-                React.createElement(Text, { color: 'blue' }, `${e.agentName || '?'}:`),
+        ? React.createElement(Box, { flexDirection: 'column', marginTop: 1, borderStyle: 'single', borderColor: COLORS.border, paddingX: 1 },
+            React.createElement(Text, { dimColor: true, bold: true }, '📨 Letzte Aktivitaet'),
+            ...recentAgentOutputs.map((e, i) => {
+              const time = formatRelative(e.timestamp);
+              return React.createElement(Box, { key: `a-${i}`, gap: 1 },
+                React.createElement(Text, { dimColor: true }, `[${time}]`.padEnd(8)),
+                React.createElement(Text, { color: 'blue', bold: true }, `${e.agentName || '?'}:`),
                 React.createElement(Text, { dimColor: true, wrap: 'truncate' },
-                  e.type === 'output' ? (e.preview?.slice(0, 80) || '...')
-                  : e.type === 'blocker-added' ? `BLOCKER: ${e.blocker}`
-                  : `DECISION: ${e.decision}`
+                  e.type === 'output' ? (e.preview?.slice(0, 60) || '...')
+                  : e.type === 'blocker-added' ? `⛔ ${e.blocker}`
+                  : `⚖ ${e.decision}`
                 ),
-              )
-            ),
+              );
+            }),
           )
         : null,
     ),
 
     // Input area
-    React.createElement(Box, { borderStyle: 'single', borderColor: 'cyan', paddingX: 1 },
-      React.createElement(Text, { color: 'cyan' }, '> '),
+    React.createElement(Box, { borderStyle: 'single', borderColor: COLORS.border, paddingX: 1 },
+      React.createElement(Text, { color: COLORS.border }, '> '),
       React.createElement(TextInput, {
         value: input,
         onChange: setInput,

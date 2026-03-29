@@ -82,6 +82,31 @@ const DEFAULT_ROLE_TASKS = [
   { title: 'Create status report', description: 'Write a brief status report on current progress and next steps.', priority: 'low' },
 ];
 
+/**
+ * Map template role names to ROLE_TASKS keys.
+ * Templates use descriptive roles (strategic-lead, implementer, etc.)
+ * while ROLE_TASKS uses traditional titles (ceo, developer, etc.)
+ */
+const ROLE_ALIASES = {
+  'strategic-lead': 'ceo',
+  'implementer': 'developer',
+  'analyst': 'cto',           // analysts get CTO tasks (architecture, tech research)
+  'marketer': 'cmo',
+  'creative': 'designer',
+  'financial': 'cfo',
+  'communicator': 'cmo',      // communicators get marketing/outreach tasks
+  'researcher': 'cto',        // researchers get technical research tasks
+  // Direct mappings (already correct)
+  'ceo': 'ceo',
+  'cto': 'cto',
+  'cmo': 'cmo',
+  'cfo': 'cfo',
+  'developer': 'developer',
+  'designer': 'designer',
+  'sales': 'sales',
+  'product': 'sales',         // product people get customer-facing tasks
+};
+
 export class TaskGenerator {
   #agentId;
   #role;
@@ -96,7 +121,8 @@ export class TaskGenerator {
 
   constructor(agentId, role, config = {}) {
     this.#agentId = agentId;
-    this.#role = (role ?? 'generic').toLowerCase();
+    const rawRole = (role ?? 'generic').toLowerCase();
+    this.#role = ROLE_ALIASES[rawRole] || rawRole;
     this.#config = {
       maxTasksPerSource: config.maxTasksPerSource ?? 5,
       ...config,
@@ -148,6 +174,28 @@ export class TaskGenerator {
 
     // Advance the index
     this.#roleTaskIndex = (this.#roleTaskIndex + tasks.length) % roleDefs.length;
+
+    // If no tasks found (all completed), generate exploration tasks
+    if (tasks.length === 0) {
+      const explorationTasks = [
+        { title: 'Research industry trends', description: 'Analyze current trends in your domain and identify opportunities.', priority: 'low' },
+        { title: 'Review competitor landscape', description: 'Update competitive analysis with recent developments.', priority: 'low' },
+        { title: 'Document learnings', description: 'Write down key insights and lessons from recent work.', priority: 'low' },
+        { title: 'Propose improvements', description: 'Identify areas for improvement and propose concrete changes.', priority: 'medium' },
+      ];
+      for (const def of explorationTasks) {
+        if (!this.#completedTitles.has(def.title)) {
+          tasks.push({
+            id: this.#nextId(),
+            title: def.title,
+            description: def.description,
+            priority: def.priority,
+            source: 'exploration',
+          });
+          if (tasks.length >= 2) break;
+        }
+      }
+    }
 
     return tasks;
   }

@@ -11,6 +11,7 @@ import { ProtectionSystem } from './ProtectionSystem.js';
 import { ProtectionStorage } from './ProtectionStorage.js';
 import { AgentMessageBus, MESSAGE_TYPE } from './AgentMessageBus.js';
 import { Personality } from './Personality.js';
+import { SelfImprover } from './SelfImprover.js';
 import { metrics } from './Metrics.js';
 
 export class Agent extends EventEmitter {
@@ -43,6 +44,7 @@ export class Agent extends EventEmitter {
   #prevSkillLevels = new Map();
   #prevPersonalityScore = 0;
   #blockedCycles = 0;
+  #selfImprover;
 
   constructor(id, options = {}) {
     super();
@@ -62,14 +64,22 @@ export class Agent extends EventEmitter {
     this.#discordWebhook = options.discordWebhook || null;
     this.#workDir = options.workDir || null;
     this.#customToolsDir = options.customToolsDir || null;
-    this.#contextManager = new ContextManager({ maxTokens: 128000 });
+    // Use configurable context window.
+    // Cloud models (glm-5:cloud etc.) typically have 32k-128k tokens.
+    // Default: 32768. Override via config.contextWindowTokens.
+    const contextTokens = options.contextWindowTokens || 32768;
+    this.#contextManager = new ContextManager({ maxTokens: contextTokens });
 
-    // Initialize Personality
-    const personalityTemplate = this.role === 'ceo' ? 'ceo' :
-                                  this.role === 'tech' ? 'tech' :
-                                  this.role === 'product' ? 'product' :
-                                  this.role === 'design' ? 'design' :
-                                  this.role === 'marketing' ? 'marketing' : 'generalist';
+    // Initialize Personality — map template roles to personality templates
+    const PERSONALITY_ROLE_MAP = {
+      'ceo': 'ceo', 'strategic-lead': 'ceo',
+      'tech': 'tech', 'cto': 'tech', 'implementer': 'tech',
+      'product': 'product', 'analyst': 'tech', 'researcher': 'tech',
+      'design': 'design', 'designer': 'design', 'creative': 'design',
+      'marketing': 'marketing', 'marketer': 'marketing', 'cmo': 'marketing',
+      'communicator': 'marketing',
+    };
+    const personalityTemplate = PERSONALITY_ROLE_MAP[this.role] || 'generalist';
     this.#personality = new Personality(this.id, options.personality || {}, personalityTemplate);
     this.#prevPersonalityScore = this.#personality.getSoulScore();
 
@@ -80,6 +90,7 @@ export class Agent extends EventEmitter {
     this.taskGenerator = new TaskGenerator(id, this.role);
     this.#protection = options.protectionSystem || new ProtectionSystem({ storage: options.protectionStorage });
     this.#protectionStorage = options.protectionStorage || new ProtectionStorage();
+    this.#selfImprover = options.selfImprover || null;
 
     // Initialize AgentMessageBus
     this.#agentBus = new AgentMessageBus(this.#bus);
@@ -175,6 +186,9 @@ export class Agent extends EventEmitter {
       // Protection check before each cycle
       const violations = this.#runProtectionCheck();
       if (violations.length > 0 && this.#bus) {
+        // Diagnostic logging: which guards are firing
+        console.log(`[Protection] ${this.name} (${this.id.slice(0, 8)}):`,
+          violations.map(v => `${v.guard}: ${v.message}`));
         this.#bus.publish('agent:protection-violation', {
           agentId: this.id, agentName: this.name, violations,
         });
@@ -194,7 +208,7 @@ export class Agent extends EventEmitter {
         case STATES.PAUSED:   await this.#handlePaused();  break;
         case STATES.COMPLETE: this.stateMachine.transition('auto'); break;
         case STATES.RESTED:   this.stateMachine.transition('auto'); break;
-        case STATES.HELP:     break;
+        case STATES.HELP:     await this.#handleHelp(); break;
       }
       this.emit('cycle', { id: this.id, cycle: this.#cycleCount, state: this.state, energy: this.energy.energy });
       this.#metrics.recordTiming('agent:cycleDuration', performance.now() - cycleStart);
@@ -257,7 +271,8 @@ export class Agent extends EventEmitter {
         const missionGoals = this.#whiteboard
           ? this.#whiteboard.getState().goals.map(g => g.goal)
           : [];
-        const skillGaps = this.skills.findGaps(missionGoals);
+        // threshold 60: skills below 60 are considered "gaps" worth practicing
+        const skillGaps = this.skills.findGaps(missionGoals, 60);
         const newTasks = this.taskGenerator.generate({
           role: this.role,
           skillGaps,
@@ -293,8 +308,8 @@ export class Agent extends EventEmitter {
       return;
     }
 
-    // Record action for protection system
-    this.#protection.recordAction(this.id, 'work', this.#currentTask?.title || 'unknown');
+    // Record action for protection system — include cycle count to avoid false loop detection
+    this.#protection.recordAction(this.id, 'work', `${this.#currentTask?.title || 'unknown'}#${this.#cycleCount}`);
 
     // Track working state duration
     const workStart = performance.now();
@@ -326,9 +341,9 @@ export class Agent extends EventEmitter {
         agentId: this.id, agentName: this.name,
         error: err.message, task: this.#currentTask?.title,
       });
-      // Mark as blocked if LLM keeps failing
+      // Mark as blocked if LLM keeps failing (increased threshold for local models)
       this.#currentTask.cyclesWorked = (this.#currentTask.cyclesWorked || 0) + 1;
-      if (this.#currentTask.cyclesWorked >= 5) {
+      if (this.#currentTask.cyclesWorked >= 8) {
         this.stateMachine.transition('blocked');
       }
     } finally {
@@ -371,9 +386,9 @@ export class Agent extends EventEmitter {
 
       const llmOptions = {
         temperature: 0.8,
-        maxTokens: 4096,
+        maxTokens: 8192,
         tools: toolDefs,
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(120000),
       };
 
       let content = '';
@@ -432,10 +447,18 @@ export class Agent extends EventEmitter {
           );
           messages.push({ role: 'tool', tool_call_id: call.id, content: resultStr });
           if (!toolResult.success) {
+            // Track failure in SelfImprover
+            if (this.#selfImprover) {
+              this.#selfImprover.onCycleComplete(this.id);
+            }
             failCount++;
             if (failCount >= 3) break;
           }
         } catch (err) {
+          // Track error in SelfImprover
+          if (this.#selfImprover) {
+            this.#selfImprover.onCycleComplete(this.id);
+          }
           messages.push({
             role: 'tool', tool_call_id: call.id,
             content: JSON.stringify({ error: true, message: err.message }),
@@ -492,6 +515,20 @@ export class Agent extends EventEmitter {
     // Parse blockers and decisions from LLM output
     this.#parseStructuredOutput(content);
 
+    // Feed meta-learner with task completion data
+    if (this.#selfImprover) {
+      // Count file creation markers in content (writeFile calls indicate real output)
+      const filesCreated = (content.match(/writeFile|TOOL:\s*writeFile/gi) || []).length;
+      this.#selfImprover.onTaskComplete({
+        agentId: this.id,
+        agentName: this.name,
+        task: task.title,
+        quality: content.length > 100 ? 0.7 : 0.3,
+        filesCreated,
+        success: true,
+      });
+    }
+
     // Save output to file
     if (this.#outputDir) {
       await this.#saveOutput(task, content);
@@ -518,7 +555,7 @@ export class Agent extends EventEmitter {
     }
 
     // Practice the skill most relevant to this task + evaluate quality
-    const matchedSkill = this.skills.learnFromTask(task, 0.2);
+    const matchedSkill = this.skills.learnFromTask(task, 3.0);
 
     if (matchedSkill) {
       const { score, reasons } = this.skills.evaluateQuality(content, matchedSkill);
@@ -621,20 +658,60 @@ export class Agent extends EventEmitter {
       if (parts.length > 0) whiteboardContext = `\n\nTeam-Whiteboard:\n${parts.join('\n')}`;
     }
 
-    // Skill context — agent knows what it's good/bad at
-    const skillSummary = this.skills.getSkillSummary();
-    const skillContext = skillSummary
-      ? `\n\nDeine Skills: ${skillSummary}`
+    // Skill context — agent knows what it's good/bad at, with level-based detail
+    const allSkills = [...this.skills.getSkills().entries()];
+    const expert   = allSkills.filter(([,s]) => s.level >= 70).map(([n,s]) => `${n}(${Math.round(s.level)})`);
+    const good     = allSkills.filter(([,s]) => s.level >= 55 && s.level < 70).map(([n,s]) => `${n}(${Math.round(s.level)})`);
+    const learning = allSkills.filter(([,s]) => s.level >= 40 && s.level < 55).map(([n,s]) => `${n}(${Math.round(s.level)})`);
+    const weak     = allSkills.filter(([,s]) => s.level < 40).map(([n,s]) => `${n}(${Math.round(s.level)})`);
+
+    const skillLines = [];
+    if (expert.length)   skillLines.push(`Experte in: ${expert.join(', ')}`);
+    if (good.length)     skillLines.push(`Gut in: ${good.join(', ')}`);
+    if (learning.length) skillLines.push(`Lernend in: ${learning.join(', ')}`);
+    if (weak.length)     skillLines.push(`Schwach in: ${weak.join(', ')} → Setze komplexe Aufgaben in diesen Bereichen auf kleinere Schritte herunter`);
+
+    const skillContext = skillLines.length > 0
+      ? `\n\nDeine aktuellen Skill-Level: ${skillLines.join('. ')}`
       : '';
+
+    // Self-improvement context — learned lessons from past failures
+    const selfImprovementContext = this.#selfImprover
+      ? this.#selfImprover.getPromptInjection(this.id)
+      : '';
+
+    // Role-specific action instructions — tell each role HOW to produce real output
+    const ROLE_ACTIONS = {
+      'ceo': 'Du triffst strategische Entscheidungen und kommunizierst sie klar. Erstelle echte Business-Dokumente (nicht nur Pläne). Nutze webFetch um Marktdaten zu recherchieren. Definiere Budget-Anforderungen und Hardware-Bedarf. Delegiere konkrete Aufgaben an dein Team über [DECISION: ...].',
+      'strategic-lead': 'Du triffst strategische Entscheidungen und kommunizierst sie klar. Erstelle echte Business-Dokumente (nicht nur Pläne). Nutze webFetch um Marktdaten zu recherchieren. Definiere Budget-Anforderungen und Hardware-Bedarf. Delegiere konkrete Aufgaben an dein Team über [DECISION: ...].',
+      'developer': 'Du schreibst ECHTEN CODE — keine Beschreibungen von Code. Erstelle .js/.ts/.py Dateien mit writeFile. Nutze bash um Code auszuführen, Tests zu starten, Dependencies zu installieren. Erstelle package.json, Dockerfiles, echte Module.',
+      'implementer': 'Du schreibst ECHTEN CODE — keine Beschreibungen von Code. Erstelle .js/.ts/.py Dateien mit writeFile. Nutze bash um Code auszuführen, Tests zu starten, Dependencies zu installieren. Erstelle package.json, Dockerfiles, echte Module.',
+      'designer': 'Du erstellst ECHTE Design-Assets — HTML/CSS Prototypen, SVG Icons, Style Guides als CSS-Dateien. Nutze writeFile für HTML-Mockups. Erstelle echte klickbare Prototypen, nicht nur Beschreibungen davon.',
+      'creative': 'Du erstellst ECHTE Design-Assets — HTML/CSS Prototypen, SVG Icons, Style Guides als CSS-Dateien. Nutze writeFile für HTML-Mockups. Erstelle echte klickbare Prototypen, nicht nur Beschreibungen davon.',
+      'analyst': 'Du führst ECHTE Recherche durch — nutze webFetch um Daten zu sammeln. Erstelle Analysen mit konkreten Zahlen. Nutze bash für Datenverarbeitung. Schreibe Python-Scripts für Analyse.',
+      'communicator': 'Du erstellst ECHTE Marketing-Materialien — Landing Pages als HTML, Social Media Posts, E-Mail Templates. Nutze webFetch um Wettbewerber zu analysieren. Erstelle echte Texte, nicht Pläne über Texte.',
+      'marketer': 'Du erstellst ECHTE Marketing-Materialien — Landing Pages als HTML, Social Media Posts, E-Mail Templates. Nutze webFetch um Wettbewerber zu analysieren. Erstelle echte Texte, nicht Pläne über Texte.',
+    };
+    const roleAction = ROLE_ACTIONS[this.role] || 'Du produzierst konkrete, verwendbare Ergebnisse — echte Dateien, echten Code, echte Analysen. KEINE Planungsdokumente oder abstrakte Beschreibungen.';
 
     const systemPrompt = [
       context,
       personalityContext,
-      'Du erledigst Aufgaben gründlich und lieferst konkreten Output. Antworte auf Deutsch.',
-      'Koordiniere dich mit deinem Team. Beziehe dich auf die Arbeit deiner Kollegen.',
-      'Wenn du auf ein Problem stößt das du nicht alleine lösen kannst, melde es mit: [BLOCKER: Beschreibung]',
-      'Wenn du eine wichtige Entscheidung triffst, markiere sie mit: [DECISION: Beschreibung]',
+      '',
+      '## ARBEITSWEISE',
+      roleAction,
+      '',
+      '## REGELN',
+      '- ERSTELLE ECHTE DATEIEN mit writeFile — Code, HTML, Config, Daten. Keine Markdown-Pläne!',
+      '- NUTZE TOOLS: writeFile (Dateien erstellen), bash (Shell-Befehle), readFile (lesen), glob (suchen)',
+      '- Wenn ein Tool fehlschlägt, nutze ein anderes oder arbeite mit dem was du hast. WIEDERHOLE NIEMALS denselben fehlgeschlagenen Aufruf.',
+      '- Baue auf der Arbeit deiner Teamkollegen auf — lies ihre Dateien mit readFile/glob',
+      '- Wichtige Entscheidungen: [DECISION: Beschreibung]',
+      '- Antworte auf Deutsch',
+      '- PRODUZIERE IMMER mindestens 1 echte Datei pro Aufgabe',
+      '- KEINE BLOCKER melden — löse Probleme selbst oder arbeite um sie herum. Mach weiter statt zu warten.',
       skillContext,
+      selfImprovementContext,
       memoryContext,
       peerContext,
       whiteboardContext,
@@ -644,7 +721,7 @@ export class Agent extends EventEmitter {
     const isUserMessage = task.source === 'user';
     const userContent = isUserMessage
       ? `Der User hat dir direkt geschrieben: "${task.description.replace(/^.*?:\s*"?|"?\s*\.?\s*Reagiere darauf.*$/g, '')}"\n\nAntworte direkt und hilfreich. Halte deine Antwort kurz und klar.`
-      : `Aufgabe: ${task.title}\n\n${task.description}\n\nLiefere ein konkretes Ergebnis für diese Aufgabe. Berücksichtige was deine Teamkollegen bereits erarbeitet haben.`;
+      : `Aufgabe: ${task.title}\n\n${task.description}\n\nArbeite so:\n1. Nutze glob um zu sehen was bereits existiert\n2. Erstelle mindestens 1 echte Datei mit writeFile (Code, HTML, Config — KEIN Markdown)\n3. Wenn ein Tool fehlschlägt, mach trotzdem weiter und erstelle dein Ergebnis mit dem was du hast`;
 
     return [
       { role: 'system', content: systemPrompt },
@@ -677,7 +754,8 @@ export class Agent extends EventEmitter {
     const docsDir = path.join(this.#outputDir, 'docs');
     await fs.mkdir(docsDir, { recursive: true });
     const slug = task.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const filename = `${this.id}-${slug}.md`;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `${this.id}-${slug}-${timestamp}.md`;
     const header = `# ${task.title}\n\n> Agent: ${this.name} (${this.role})\n> Datum: ${new Date().toISOString()}\n\n---\n\n`;
     await fs.writeFile(path.join(docsDir, filename), header + content);
   }
@@ -725,7 +803,26 @@ export class Agent extends EventEmitter {
 
   async #handleBlocked() {
     const timeBlocked = this.stateMachine.getTimeInState();
-    if (timeBlocked > 30000) this.stateMachine.transition('timeout');
+    if (timeBlocked > 30000) {
+      this.stateMachine.transition('timeout');
+    } else if (timeBlocked > 60000) {
+      // After 60s in BLOCKED, auto-recover to IDLE
+      this.stateMachine.transition('autoRecover');
+      if (this.#bus) this.#bus.publish('agent:recovered', {
+        agentId: this.id, agentName: this.name, from: 'BLOCKED',
+      });
+    }
+  }
+
+  async #handleHelp() {
+    const timeInHelp = this.stateMachine.getTimeInState();
+    // After 60 seconds in HELP state, auto-recover to IDLE
+    if (timeInHelp > 60000) {
+      this.stateMachine.transition('timeout');
+      if (this.#bus) this.#bus.publish('agent:recovered', {
+        agentId: this.id, agentName: this.name, from: 'HELP',
+      });
+    }
   }
 
   async #handlePaused() {

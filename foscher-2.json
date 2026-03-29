@@ -1,0 +1,612 @@
+[
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783589676
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783594859
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783594872
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774783594881
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783599693
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783610030
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783610056
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774783610071
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783614693
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783617976
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783617996
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\",\"description\":\"List files in working directory\"}",
+    "timestamp": 1774783618008
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783619693
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783634190
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783634213
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774783634231
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774783634696
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783638929
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783638941
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774783638946
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783739751
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"sprint-goals-analyst.md\",\"content\":\"# Sprint Goals - foscher 2 (Analyst)\\n\\n## Team-Kontext",
+    "timestamp": 1774783755120
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783759758
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783762811
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783764757
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783775898
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783779752
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783783418
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774783784753
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774783793291
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774783793305
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783894771
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783899199
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783899775
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783903343
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783904779
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783907444
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783909774
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783915494
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774783919776
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774783926588
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"pwd\"}",
+    "timestamp": 1774783926601
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784029814
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784039428
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*responsibility*\"}",
+    "timestamp": 1774784039445
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*role*\"}",
+    "timestamp": 1774784039454
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784039830
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784042336
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784044814
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784071632
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/responsibilities*\"}",
+    "timestamp": 1774784071642
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/team*\"}",
+    "timestamp": 1774784071652
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784104828
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784108070
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784109830
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784114724
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784114832
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784118999
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/whiteboard*\"}",
+    "timestamp": 1774784119022
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784119837
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784141529
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784141549
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784144841
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784149781
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784149817
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784149823
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784249872
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784257094
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784259875
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784264921
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784269881
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784272805
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784274882
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784277288
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784277298
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784279879
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784282366
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784384930
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784388134
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784388147
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784388154
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784389926
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784407449
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784407468
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784407478
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784409926
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784413688
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784413699
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/responsibilities*\"}",
+    "timestamp": 1774784413712
+  },
+  {
+    "actionType": "work",
+    "target": "Define responsibilities",
+    "timestamp": 1774784414931
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784420100
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784454944
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784461777
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784461785
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\"}",
+    "timestamp": 1774784461792
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784464956
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784473744
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784473765
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784473774
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784474973
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784486424
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784486454
+  },
+  {
+    "actionType": "tool:bash",
+    "target": "{\"command\":\"ls -la\",\"description\":\"List files in working directory\"}",
+    "timestamp": 1774784486464
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784489990
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784499654
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784499668
+  },
+  {
+    "actionType": "work",
+    "target": "Set personal goals",
+    "timestamp": 1774784499983
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.md\"}",
+    "timestamp": 1774784518600
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.txt\"}",
+    "timestamp": 1774784518622
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*.json\"}",
+    "timestamp": 1774784518632
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784620007
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784627651
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784630016
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784645935
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"*.md\"}",
+    "timestamp": 1774784645956
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"*.txt\"}",
+    "timestamp": 1774784645964
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784650007
+  },
+  {
+    "actionType": "tool:writeFile",
+    "target": "{\"path\":\"status_report.md\",\"content\":\"# Statusbericht - Hardware für lokale LLMs\\n\\n**Datum:** Aktue",
+    "timestamp": 1774784699314
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784700025
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784733024
+  },
+  {
+    "actionType": "work",
+    "target": "Create status report",
+    "timestamp": 1774784735030
+  },
+  {
+    "actionType": "tool:glob",
+    "target": "{\"pattern\":\"**/*\"}",
+    "timestamp": 1774784740776
+  }
+]

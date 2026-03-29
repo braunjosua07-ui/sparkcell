@@ -13,9 +13,9 @@ export const STATES = {
 const TRANSITIONS = {
   [STATES.IDLE]:     { taskAvailable: STATES.WORKING, noTasks: STATES.IDLE },
   [STATES.WORKING]:  { taskComplete: STATES.COMPLETE, blocked: STATES.BLOCKED, energyLow: STATES.PAUSED, continue: STATES.WORKING },
-  [STATES.BLOCKED]:  { helpReceived: STATES.WORKING, timeout: STATES.HELP, continue: STATES.BLOCKED },
+  [STATES.BLOCKED]:  { helpReceived: STATES.WORKING, timeout: STATES.HELP, autoRecover: STATES.IDLE, continue: STATES.BLOCKED },
   [STATES.PAUSED]:   { energyRestored: STATES.RESTED, emergency: STATES.WORKING, continue: STATES.PAUSED },
-  [STATES.HELP]:     { resolved: STATES.IDLE, continue: STATES.HELP },
+  [STATES.HELP]:     { resolved: STATES.IDLE, timeout: STATES.IDLE, continue: STATES.HELP },
   [STATES.COMPLETE]: { auto: STATES.IDLE },
   [STATES.RESTED]:   { auto: STATES.IDLE },
 };

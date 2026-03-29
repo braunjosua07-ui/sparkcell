@@ -2,12 +2,12 @@
 
 import { ProtectionStorage } from './ProtectionStorage.js';
 
-const LOOP_THRESHOLD = 5;
-const LOOP_WINDOW = 20;
+const LOOP_THRESHOLD = 8;
+const LOOP_WINDOW = 30;
 const ENERGY_BOOST_THRESHOLD = 3;
 const SKILL_JUMP_THRESHOLD = 20;
 const COMMITMENT_LIMIT = 10;
-const ISOLATION_WINDOW = 15;   // actions without any communication → isolated
+const ISOLATION_WINDOW = 50;   // actions without any communication → isolated (high because solo work is normal)
 const MEMORY_LIMIT = 1000;
 const DEADLOCK_ACTIONS = 5;    // blocked for this many actions without help request
 
@@ -116,6 +116,8 @@ export class ProtectionSystem {
     if (!skillLevels || !prevSkillLevels) return;
     for (const [skill, level] of skillLevels) {
       const prev = prevSkillLevels.get(skill) ?? 0;
+      // Skip newly discovered skills (prev was 0 = not tracked before)
+      if (prev === 0) continue;
       if (level - prev > SKILL_JUMP_THRESHOLD) {
         violations.push({
           guard: 'skillInflation',

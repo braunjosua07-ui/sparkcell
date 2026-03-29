@@ -117,7 +117,7 @@ export class SkillManager {
    * @param {number} hours
    * @returns {string|null}
    */
-  learnFromTask(task, hours = 0.2) {
+  learnFromTask(task, hours = 1.0) {
     const matched = this.matchTaskToSkill(task);
     if (matched) {
       this.practice(matched, hours);
@@ -196,7 +196,7 @@ export class SkillManager {
 
     if (qualityScore >= 0.7) {
       // Good output — bonus XP
-      entry.xp += 50;
+      entry.xp += 150;
       entry.level = xpToLevel(entry.xp);
 
       // Emit skill upgrade event if level increased
