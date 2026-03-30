@@ -45,6 +45,7 @@ export class Agent extends EventEmitter {
   #prevPersonalityScore = 0;
   #blockedCycles = 0;
   #selfImprover;
+  #pauseRoom;
 
   constructor(id, options = {}) {
     super();
@@ -91,6 +92,7 @@ export class Agent extends EventEmitter {
     this.#protection = options.protectionSystem || new ProtectionSystem({ storage: options.protectionStorage });
     this.#protectionStorage = options.protectionStorage || new ProtectionStorage();
     this.#selfImprover = options.selfImprover || null;
+    this.#pauseRoom = options.pauseRoom || null;
 
     // Initialize AgentMessageBus
     this.#agentBus = new AgentMessageBus(this.#bus);
@@ -529,6 +531,11 @@ export class Agent extends EventEmitter {
       });
     }
 
+    // Post insight to PauseRoom swarm pool
+    if (this.#pauseRoom && content) {
+      this.#pauseRoom.postInsight(this.id, this.name, this.role, task.title, content);
+    }
+
     // Save output to file
     if (this.#outputDir) {
       await this.#saveOutput(task, content);
@@ -680,6 +687,18 @@ export class Agent extends EventEmitter {
       ? this.#selfImprover.getPromptInjection(this.id)
       : '';
 
+    // Swarm intelligence — what other agents recently discovered
+    let swarmContext = '';
+    if (this.#pauseRoom) {
+      const unseenInsights = this.#pauseRoom.getUnseenInsights(this.id, 5);
+      if (unseenInsights.length > 0) {
+        const lines = unseenInsights.map(i =>
+          `- ${i.agentName} (${i.role}) nach "${i.taskTitle}": ${i.insight}`
+        );
+        swarmContext = `\n\n## Was deine Kollegen gerade herausgefunden haben:\n${lines.join('\n')}\n→ Nutze dieses Wissen. Baue darauf auf. Vermeide Fehler die andere schon gemacht haben.`;
+      }
+    }
+
     // Role-specific action instructions — tell each role HOW to produce real output
     const ROLE_ACTIONS = {
       'ceo': 'Du triffst strategische Entscheidungen und kommunizierst sie klar. Erstelle echte Business-Dokumente (nicht nur Pläne). Nutze webFetch um Marktdaten zu recherchieren. Definiere Budget-Anforderungen und Hardware-Bedarf. Delegiere konkrete Aufgaben an dein Team über [DECISION: ...].',
@@ -712,6 +731,7 @@ export class Agent extends EventEmitter {
       '- KEINE BLOCKER melden — löse Probleme selbst oder arbeite um sie herum. Mach weiter statt zu warten.',
       skillContext,
       selfImprovementContext,
+      swarmContext,
       memoryContext,
       peerContext,
       whiteboardContext,

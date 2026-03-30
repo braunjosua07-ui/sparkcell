@@ -209,7 +209,8 @@ export class SparkCell extends EventEmitter {
         workDir,
         customToolsDir: path.join(workDir, 'custom-tools'),
         selfImprover: this.#selfImprover,
-        contextWindowTokens: this.#config.contextWindowTokens || 8192,
+        pauseRoom: this.#pauseRoom,
+        contextWindowTokens: this.#config.contextWindowTokens || 32768,
       });
       this.#agents.set(agentConfig.id, agent);
     }
